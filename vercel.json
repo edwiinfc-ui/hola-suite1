@@ -1,23 +1,11 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "name": "hola-suite",
   "public": false,
   "buildCommand": "npm install",
-  "devCommand": "node server.js",
-  "env": [
-    {
-      "key": "NODE_ENV",
-      "value": "production"
-    },
-    {
-      "key": "PORT",
-      "value": "3000"
-    }
-  ],
   "regions": ["sfo1"],
   "functions": {
-    "server.js": {
+    "api/index.js": {
       "maxDuration": 60,
       "memory": 1024,
       "runtime": "nodejs18.x"
@@ -26,11 +14,23 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/server.js"
+      "destination": "/api"
     },
     {
-      "source": "/(.*)",
-      "destination": "/server.js"
+      "source": "/(.*).html",
+      "destination": "/$1.html"
+    },
+    {
+      "source": "/js/(.*)",
+      "destination": "/js/$1"
+    },
+    {
+      "source": "/css/(.*)",
+      "destination": "/css/$1"
+    },
+    {
+      "source": "/(?!api|js|css|.*\\.)(.*)",
+      "destination": "/vylex.html"
     }
   ],
   "headers": [

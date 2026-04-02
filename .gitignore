@@ -27,6 +27,7 @@ pids/
 .DS_Store
 .codex
 .codex/
+.ssh/
 
 # Build outputs
 dist/

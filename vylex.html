@@ -5348,18 +5348,25 @@ function renderKanban(){
   
   // Renderizar tabs si existen
   renderKanbanTabs();
+
+  const activeKb = getActiveKanban();
+  if(activeKb && activeKb.type === 'board'){
+    renderBoardKanban(activeKb);
+    return;
+  }
   
   // Obtener filtros del kanban activo o usar los de la UI
-  const activeKanban = getActiveKanbanFilters();
+  const activeKanban = getActiveKanban();
   let cons = activeKanban ? activeKanban.consultor : (document.getElementById('kanbanConsFilter')?.value||'');
   let pais = activeKanban ? activeKanban.pais : (document.getElementById('kanbanPaisFilter')?.value||'');
   let onlyAlert = activeKanban ? activeKanban.onlyAlert : (document.getElementById('kanbanOnlyAlert')?.checked||false);
   
   // Si hay filtro personalizado, usarlo
-  if(activeKanban) {
-    cons = activeKanban.filterByConsultor ? activeKanban.consultor : '';
-    pais = activeKanban.filterByPais ? activeKanban.pais : '';
-    onlyAlert = activeKanban.onlyAlert;
+  if(activeKanban && activeKanban.type === 'view') {
+    const cfg = activeKanban.config || {};
+    cons = cfg.filterByConsultor ? cfg.consultor : '';
+    pais = cfg.filterByPais ? cfg.pais : '';
+    onlyAlert = Boolean(cfg.onlyAlert);
   }
   
   let data=(APP.filteredByDate||APP.data).filter(c=>c.statusType==='impl');
@@ -5404,6 +5411,216 @@ function renderKanban(){
       </div>
     </div>`;
   }).join('');
+}
+
+function getActiveKanban(){
+  if(APP_ACTIVE_KANBAN === 'default') return null;
+  return APP_CUSTOM_KANBANS.find(kb => kb.id === APP_ACTIVE_KANBAN) || null;
+}
+
+function persistActiveKanban(){
+  saveCustomKanbans();
+}
+
+function renderBoardKanban(kb){
+  const board=document.getElementById('kanbanBoard');if(!board)return;
+  const data = kb.board || {};
+  const columns = Array.isArray(data.columns) ? data.columns : [];
+  const cards = Array.isArray(data.cards) ? data.cards : [];
+  setTxt('kanbanCount',`${cards.length} tarjetas`);
+
+  board.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="btn-outline" onclick="addBoardColumn('${kb.id}')"><i class="fa fa-plus"></i> Columna</button>
+      <button class="btn-primary" onclick="addBoardCard('${kb.id}')"><i class="fa fa-plus"></i> Tarjeta</button>
+    </div>
+    <div class="kanban-board-wrap" style="display:grid;grid-auto-flow:column;grid-auto-columns:minmax(260px, 1fr);gap:14px;overflow-x:auto;padding-bottom:6px">
+      ${columns.map(col=>{
+        const colCards = cards.filter(c=>c.columnId===col.id);
+        return `
+          <div class="kanban-col" data-stage-key="${col.id}">
+            <div class="kanban-col-header" style="gap:10px">
+              <span class="kanban-col-title">${escHtml(col.label||'Columna')}</span>
+              <span class="kanban-col-count">${colCards.length}</span>
+              <span style="margin-left:auto;display:flex;gap:6px">
+                <button class="kanban-mini-btn" onclick="event.stopPropagation();renameBoardColumn('${kb.id}','${col.id}')" title="Renombrar"><i class="fa fa-pen"></i></button>
+                <button class="kanban-mini-btn" onclick="event.stopPropagation();deleteBoardColumn('${kb.id}','${col.id}')" title="Eliminar"><i class="fa fa-trash"></i></button>
+              </span>
+            </div>
+            <div class="kanban-items" data-stage-key="${col.id}" ondragover="handleBoardDragOver(event)" ondragleave="handleBoardDragLeave(event)" ondrop="handleBoardDrop(event,'${kb.id}','${col.id}')">
+              ${colCards.length===0?`<div style="text-align:center;padding:18px;font-size:11px;color:var(--muted)">Sin tarjetas</div>`:''}
+              ${colCards.map(card=>renderBoardCard(card,kb.id)).join('')}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderBoardCard(card, kbId){
+  const title = escHtml(card.title || 'Sin título');
+  const tags = Array.isArray(card.fields?.etiquetas) ? card.fields.etiquetas : [];
+  return `
+    <div class="kanban-card" draggable="true" ondragstart="handleBoardDragStart(event,'${kbId}','${card.id}')" ondragend="handleBoardDragEnd(event)" onclick="openBoardCardModal('${kbId}','${card.id}')">
+      <div class="kanban-card-name">${title}</div>
+      ${tags.length?`<div class="kanban-tag-list">${tags.slice(0,3).map(t=>`<span class="kanban-tag">${escHtml(t)}</span>`).join('')}</div>`:''}
+      <div class="kanban-actions">
+        <button class="kanban-mini-btn" onclick="event.stopPropagation();openBoardCardModal('${kbId}','${card.id}')" title="Editar"><i class="fa fa-pen"></i></button>
+      </div>
+    </div>
+  `;
+}
+
+function getBoardById(kbId){
+  const idx = APP_CUSTOM_KANBANS.findIndex(k=>k.id===kbId);
+  if(idx < 0) return { idx:-1, kb:null };
+  return { idx, kb: APP_CUSTOM_KANBANS[idx] };
+}
+
+function addBoardColumn(kbId){
+  const name = prompt('Nombre de la columna:');
+  if(!name) return;
+  const { idx, kb } = getBoardById(kbId);
+  if(!kb) return;
+  if(!kb.board) kb.board = { columns:[], cards:[], cardFields:[] };
+  kb.board.columns = Array.isArray(kb.board.columns) ? kb.board.columns : [];
+  kb.board.columns.push({ id:`col_${Date.now()}`, label:name.trim() });
+  kb.updatedAt = new Date().toISOString();
+  APP_CUSTOM_KANBANS[idx] = kb;
+  persistActiveKanban();
+  renderKanban();
+}
+
+function renameBoardColumn(kbId, colId){
+  const { idx, kb } = getBoardById(kbId);
+  if(!kb?.board?.columns) return;
+  const col = kb.board.columns.find(c=>c.id===colId);
+  if(!col) return;
+  const name = prompt('Nuevo nombre:', col.label||'');
+  if(!name) return;
+  col.label = name.trim();
+  kb.updatedAt = new Date().toISOString();
+  APP_CUSTOM_KANBANS[idx] = kb;
+  persistActiveKanban();
+  renderKanban();
+}
+
+function deleteBoardColumn(kbId, colId){
+  if(!confirm('¿Eliminar esta columna? Las tarjetas se moverán a la primera columna.')) return;
+  const { idx, kb } = getBoardById(kbId);
+  if(!kb?.board) return;
+  const cols = kb.board.columns || [];
+  if(cols.length <= 1){ toast('warning','Debe existir al menos 1 columna'); return; }
+  kb.board.columns = cols.filter(c=>c.id!==colId);
+  const fallback = kb.board.columns[0]?.id;
+  kb.board.cards = (kb.board.cards||[]).map(card => card.columnId===colId ? { ...card, columnId:fallback } : card);
+  kb.updatedAt = new Date().toISOString();
+  APP_CUSTOM_KANBANS[idx] = kb;
+  persistActiveKanban();
+  renderKanban();
+}
+
+function addBoardCard(kbId){
+  const { idx, kb } = getBoardById(kbId);
+  if(!kb?.board) return;
+  const title = prompt('Título de la tarjeta:');
+  if(!title) return;
+  const firstCol = kb.board.columns?.[0]?.id;
+  if(!firstCol){ toast('error','Agrega una columna primero'); return; }
+  kb.board.cards = Array.isArray(kb.board.cards) ? kb.board.cards : [];
+  kb.board.cards.unshift({ id:`card_${Date.now()}`, title:title.trim(), columnId:firstCol, fields:{ etiquetas:[] }, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() });
+  kb.updatedAt = new Date().toISOString();
+  APP_CUSTOM_KANBANS[idx] = kb;
+  persistActiveKanban();
+  renderKanban();
+}
+
+function openBoardCardModal(kbId, cardId){
+  const { idx, kb } = getBoardById(kbId);
+  const card = kb?.board?.cards?.find(c=>c.id===cardId);
+  if(!kb || !card) return;
+  const fields = kb.board.cardFields || [];
+  const tags = Array.isArray(card.fields?.etiquetas) ? card.fields.etiquetas.join(', ') : '';
+  const desc = String(card.fields?.description || '');
+  const resp = String(card.fields?.responsable || '');
+  setHtml('kanbanCardModalContent', `
+    <div class="modal-section-title"><i class="fa fa-pen"></i> Tarjeta</div>
+    <div class="config-field"><label>Título</label><input type="text" id="boardCardTitle" value="${escHtml(card.title||'')}" /></div>
+    <div class="config-field"><label>Descripción</label><textarea id="boardCardDesc" rows="3" style="resize:vertical">${escHtml(desc)}</textarea></div>
+    <div class="config-field"><label>Responsable</label><input type="text" id="boardCardResp" value="${escHtml(resp)}" /></div>
+    <div class="config-field"><label>Etiquetas (coma)</label><input type="text" id="boardCardTags" value="${escHtml(tags)}" /></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn-primary" onclick="saveBoardCard('${kbId}','${cardId}')"><i class="fa fa-floppy-disk"></i> Guardar</button>
+      <button class="btn-outline" onclick="deleteBoardCard('${kbId}','${cardId}')"><i class="fa fa-trash"></i> Eliminar</button>
+    </div>
+  `);
+  openModal('kanbanCardModal');
+}
+
+function saveBoardCard(kbId, cardId){
+  const { idx, kb } = getBoardById(kbId);
+  if(!kb?.board?.cards) return;
+  const card = kb.board.cards.find(c=>c.id===cardId);
+  if(!card) return;
+  card.title = String(document.getElementById('boardCardTitle')?.value || '').trim();
+  card.fields = card.fields || {};
+  card.fields.description = String(document.getElementById('boardCardDesc')?.value || '').trim();
+  card.fields.responsable = String(document.getElementById('boardCardResp')?.value || '').trim();
+  const tagsRaw = String(document.getElementById('boardCardTags')?.value || '');
+  card.fields.etiquetas = tagsRaw.split(',').map(t=>t.trim()).filter(Boolean);
+  card.updatedAt = new Date().toISOString();
+  kb.updatedAt = new Date().toISOString();
+  APP_CUSTOM_KANBANS[idx] = kb;
+  persistActiveKanban();
+  closeModal('kanbanCardModal');
+  renderKanban();
+  toast('success','Tarjeta actualizada');
+}
+
+function deleteBoardCard(kbId, cardId){
+  if(!confirm('¿Eliminar esta tarjeta?')) return;
+  const { idx, kb } = getBoardById(kbId);
+  if(!kb?.board?.cards) return;
+  kb.board.cards = kb.board.cards.filter(c=>c.id!==cardId);
+  kb.updatedAt = new Date().toISOString();
+  APP_CUSTOM_KANBANS[idx] = kb;
+  persistActiveKanban();
+  closeModal('kanbanCardModal');
+  renderKanban();
+}
+
+function handleBoardDragStart(event, kbId, cardId){
+  event.dataTransfer.setData('text/plain', JSON.stringify({ kbId, cardId }));
+  event.dataTransfer.effectAllowed='move';
+  event.currentTarget.classList.add('dragging');
+}
+function handleBoardDragEnd(event){
+  event.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.kanban-drop-target').forEach(el=>el.classList.remove('kanban-drop-target'));
+}
+function handleBoardDragOver(event){
+  event.preventDefault();
+  event.currentTarget.classList.add('kanban-drop-target');
+}
+function handleBoardDragLeave(event){
+  event.currentTarget.classList.remove('kanban-drop-target');
+}
+function handleBoardDrop(event, kbId, colId){
+  event.preventDefault();
+  event.currentTarget.classList.remove('kanban-drop-target');
+  let payload = null;
+  try{ payload = JSON.parse(event.dataTransfer.getData('text/plain')||'{}'); }catch{}
+  if(!payload?.cardId) return;
+  const { idx, kb } = getBoardById(kbId);
+  const card = kb?.board?.cards?.find(c=>c.id===payload.cardId);
+  if(!kb || !card) return;
+  card.columnId = colId;
+  card.updatedAt = new Date().toISOString();
+  kb.updatedAt = new Date().toISOString();
+  APP_CUSTOM_KANBANS[idx] = kb;
+  persistActiveKanban();
+  renderKanban();
 }
 
 function handleKanbanDragStart(event, clientId){
@@ -5482,7 +5699,7 @@ function renderKanbanTabs(){
   let html = '<button class="tab-btn ' + (APP_ACTIVE_KANBAN==='default'?'active':'') + '" data-tab="default" onclick="switchKanbanTab(\'default\')">Estándar</button>';
   APP_CUSTOM_KANBANS.forEach(kb => {
     const isOwner = kb.ownerId === APP.currentUser?.id;
-    const shareBtn = isOwner ? '<button onclick="event.stopPropagation();showShareKanbanModal(\'' + kb.id + '\')" style="position:absolute;right:22px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0;width:14px;height:14px;display:flex;align-items:center;justify-content:center" title="Compartir"><i class="fa fa-share"></i></button>' : '';
+    const shareBtn = (isOwner && APP.token && canUseServerProxy()) ? '<button onclick="event.stopPropagation();showShareKanbanModal(\'' + kb.id + '\')" style="position:absolute;right:22px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:0;width:14px;height:14px;display:flex;align-items:center;justify-content:center" title="Compartir"><i class="fa fa-share"></i></button>' : '';
     const closeBtn = isOwner ? '<span class="tab-close" onclick="event.stopPropagation();deleteCustomKanban(\'' + kb.id + '\')" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:14px;height:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);font-size:10px">×</span>' : '';
     html += '<button class="tab-btn ' + (APP_ACTIVE_KANBAN===kb.id?'active':'') + '" data-tab="' + kb.id + '" onclick="switchKanbanTab(\'' + kb.id + '\')" style="position:relative;padding-right:' + (isOwner ? '42' : '8') + 'px">' + escHtml(kb.name) + (kb.sharedWith?.length ? ' <span style="font-size:9px;opacity:.6">(+' + kb.sharedWith.length + ')</span>' : '') + shareBtn + closeBtn + '</button>';
   });
@@ -5504,37 +5721,44 @@ function showCreateKanbanModal(){
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.onclick = (e) => { if(e.target === modal) modal.remove(); };
-    modal.innerHTML = `
-      <div class="modal-content" style="width:500px">
-        <div class="modal-header">
-          <h2>Crear Kanban Personalizado</h2>
-          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
-        </div>
-        <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:16px">
-          <div>
-            <label>Nombre del Kanban</label>
-            <input type="text" id="newKanbanName" placeholder="Ej: Mi Proyecto A" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
-          </div>
-          <div>
-            <label>Filtros</label>
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <label style="display:flex;align-items:center;gap:8px">
-                <input type="checkbox" id="kbFilterByConsultor"> Filtrar por Consultor
-                <select id="kbConsultor" disabled style="flex:1;padding:6px;border:1px solid var(--border);border-radius:4px">
-                  <option value="">Seleccionar...</option>
-                </select>
-              </label>
-              <label style="display:flex;align-items:center;gap:8px">
-                <input type="checkbox" id="kbFilterByPais"> Filtrar por País
-                <select id="kbPais" disabled style="flex:1;padding:6px;border:1px solid var(--border);border-radius:4px">
-                  <option value="">Seleccionar...</option>
-                </select>
-              </label>
-              <label style="display:flex;align-items:center;gap:8px">
-                <input type="checkbox" id="kbOnlyAlert"> Solo con Alerta
-              </label>
-            </div>
-          </div>
+	    modal.innerHTML = `
+	      <div class="modal-content" style="width:500px">
+	        <div class="modal-header">
+	          <h2>Crear Kanban</h2>
+	          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
+	        </div>
+	        <div class="modal-body" style="padding:20px;display:flex;flex-direction:column;gap:16px">
+	          <div>
+	            <label>Nombre del Kanban</label>
+	            <input type="text" id="newKanbanName" placeholder="Ej: Mi Proyecto A" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
+	          </div>
+	          <div>
+	            <label>Tipo</label>
+	            <select id="newKanbanType" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
+	              <option value="view">Vista (filtros)</option>
+	              <option value="board">Kanban personalizado (columnas y tarjetas)</option>
+	            </select>
+	          </div>
+	          <div>
+	            <label id="newKanbanSectionTitle">Filtros</label>
+	            <div id="newKanbanSectionBody" style="display:flex;flex-direction:column;gap:8px">
+	              <label style="display:flex;align-items:center;gap:8px">
+	                <input type="checkbox" id="kbFilterByConsultor"> Filtrar por Consultor
+	                <select id="kbConsultor" disabled style="flex:1;padding:6px;border:1px solid var(--border);border-radius:4px">
+	                  <option value="">Seleccionar...</option>
+	                </select>
+	              </label>
+	              <label style="display:flex;align-items:center;gap:8px">
+	                <input type="checkbox" id="kbFilterByPais"> Filtrar por País
+	                <select id="kbPais" disabled style="flex:1;padding:6px;border:1px solid var(--border);border-radius:4px">
+	                  <option value="">Seleccionar...</option>
+	                </select>
+	              </label>
+	              <label style="display:flex;align-items:center;gap:8px">
+	                <input type="checkbox" id="kbOnlyAlert"> Solo con Alerta
+	              </label>
+	            </div>
+	          </div>
           <div style="display:flex;gap:8px;justify-content:flex-end">
             <button class="btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
             <button class="btn-primary" id="saveKanbanBtn">Crear</button>
@@ -5542,44 +5766,92 @@ function showCreateKanbanModal(){
         </div>
       </div>
     `;
-    document.body.appendChild(modal);
+	    document.body.appendChild(modal);
     
-    // Asignar evento al botón Crear
-    document.getElementById('saveKanbanBtn').addEventListener('click', saveNewKanban);
+	    // Asignar evento al botón Crear
+	    document.getElementById('saveKanbanBtn').addEventListener('click', saveNewKanban);
+
+	    // Cambiar UI según tipo
+	    const typeEl = document.getElementById('newKanbanType');
+	    const sectionTitleEl = document.getElementById('newKanbanSectionTitle');
+	    const sectionBodyEl = document.getElementById('newKanbanSectionBody');
+	    function renderTypeSection(){
+	      const type = typeEl?.value || 'view';
+	      if(type === 'board'){
+	        if(sectionTitleEl) sectionTitleEl.textContent = 'Columnas';
+	        if(sectionBodyEl){
+	          sectionBodyEl.innerHTML = `
+	            <div class="config-field" style="margin:0">
+	              <label style="margin-bottom:6px;font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase">Columnas iniciales (separadas por coma)</label>
+	              <input type="text" id="kbColumns" placeholder="Ej: Por hacer, En progreso, Hecho" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
+	            </div>
+	            <div style="font-size:11px;color:var(--muted);line-height:1.4">
+	              Crea un kanban totalmente personalizado: columnas, tarjetas y campos dentro de la tarjeta.
+	            </div>
+	          `;
+	        }
+	      }else{
+	        if(sectionTitleEl) sectionTitleEl.textContent = 'Filtros';
+	        if(sectionBodyEl){
+	          sectionBodyEl.innerHTML = `
+	            <label style="display:flex;align-items:center;gap:8px">
+	              <input type="checkbox" id="kbFilterByConsultor"> Filtrar por Consultor
+	              <select id="kbConsultor" disabled style="flex:1;padding:6px;border:1px solid var(--border);border-radius:4px">
+	                <option value="">Seleccionar...</option>
+	              </select>
+	            </label>
+	            <label style="display:flex;align-items:center;gap:8px">
+	              <input type="checkbox" id="kbFilterByPais"> Filtrar por País
+	              <select id="kbPais" disabled style="flex:1;padding:6px;border:1px solid var(--border);border-radius:4px">
+	                <option value="">Seleccionar...</option>
+	              </select>
+	            </label>
+	            <label style="display:flex;align-items:center;gap:8px">
+	              <input type="checkbox" id="kbOnlyAlert"> Solo con Alerta
+	            </label>
+	          `;
+	        }
+	        // Re-llenar selects
+	        const consSelect = document.getElementById('kbConsultor');
+	        const paisSelect = document.getElementById('kbPais');
+	        const data = APP.data || [];
+	        const uniqueConsultores = [...new Set(data.map(c => c.rKickoff).filter(Boolean))];
+	        const uniquePaises = [...new Set(data.map(c => c.pais).filter(Boolean))];
+	        if(consSelect){
+	          uniqueConsultores.forEach(c => {
+	            const opt = document.createElement('option');
+	            opt.value = c;
+	            opt.textContent = c;
+	            consSelect.appendChild(opt);
+	          });
+	        }
+	        if(paisSelect){
+	          uniquePaises.forEach(p => {
+	            const opt = document.createElement('option');
+	            opt.value = p;
+	            opt.textContent = p;
+	            paisSelect.appendChild(opt);
+	          });
+	        }
+	        document.getElementById('kbFilterByConsultor')?.addEventListener('change', (e) => {
+	          const el = document.getElementById('kbConsultor');
+	          if(el) el.disabled = !e.target.checked;
+	        });
+	        document.getElementById('kbFilterByPais')?.addEventListener('change', (e) => {
+	          const el = document.getElementById('kbPais');
+	          if(el) el.disabled = !e.target.checked;
+	        });
+	      }
+	    }
+	    typeEl?.addEventListener('change', renderTypeSection);
+	    renderTypeSection();
     
-    // Llenar selects con datos seguros
-    const consSelect = document.getElementById('kbConsultor');
-    const paisSelect = document.getElementById('kbPais');
-    const data = APP.data || [];
-    const uniqueConsultores = [...new Set(data.map(c => c.rKickoff).filter(Boolean))];
-    const uniquePaises = [...new Set(data.map(c => c.pais).filter(Boolean))];
-    
-    uniqueConsultores.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c;
-      opt.textContent = c;
-      consSelect.appendChild(opt);
-    });
-    
-    uniquePaises.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p;
-      opt.textContent = p;
-      paisSelect.appendChild(opt);
-    });
-    
-    // Event listeners para enable/disable
-    document.getElementById('kbFilterByConsultor').addEventListener('change', (e) => {
-      document.getElementById('kbConsultor').disabled = !e.target.checked;
-    });
-    document.getElementById('kbFilterByPais').addEventListener('change', (e) => {
-      document.getElementById('kbPais').disabled = !e.target.checked;
-    });
-  } catch(e) {
-    console.error('Error en showCreateKanbanModal:', e);
-    alert('Error al abrir el formulario: ' + e.message);
-  }
-}
+	    // (los selects se llenan en renderTypeSection para tipo "view")
+	  } catch(e) {
+	    console.error('Error en showCreateKanbanModal:', e);
+	    alert('Error al abrir el formulario: ' + e.message);
+	  }
+	}
 
 function saveNewKanban(){
   const name = document.getElementById('newKanbanName')?.value?.trim();
@@ -5587,46 +5859,60 @@ function saveNewKanban(){
     alert('Ingresa un nombre para el kanban');
     return;
   }
-  
-  const config = {
-    filterByConsultor: document.getElementById('kbFilterByConsultor')?.checked,
-    consultor: document.getElementById('kbConsultor')?.value,
-    filterByPais: document.getElementById('kbFilterByPais')?.checked,
-    pais: document.getElementById('kbPais')?.value,
-    onlyAlert: document.getElementById('kbOnlyAlert')?.checked
-  };
-  
-  // Guardar en servidor
-  fetch('/api/kanbans', {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + APP.token
-    },
-    body: JSON.stringify({
-      name: name,
-      type: 'custom',
-      config: config,
-      permissions: 'private'
-    })
-  })
-  .then(r => r.json())
-  .then(data => {
-    if(data.error) throw new Error(data.error);
-    
-    // Actualizar lista local
-    if(!APP_CUSTOM_KANBANS) APP_CUSTOM_KANBANS = [];
-    APP_CUSTOM_KANBANS.push(data.kanban);
-    
-    renderKanbanTabs();
-    switchKanbanTab(data.kanban.id);
-    document.querySelector('.modal-overlay')?.remove();
-    toast('success', 'Kanban creado: ' + name);
-  })
-  .catch(e => {
-    console.error('Error creando kanban:', e);
-    alert('Error: ' + e.message);
-  });
+  const type = document.getElementById('newKanbanType')?.value || 'view';
+
+  let kanban = null;
+  if(type === 'board'){
+    const colsRaw = String(document.getElementById('kbColumns')?.value || '').trim();
+    const cols = colsRaw ? colsRaw.split(',').map(s=>s.trim()).filter(Boolean) : ['Por hacer','En progreso','Hecho'];
+    const columns = cols.map((label, idx)=>({ id:`col_${Date.now()}_${idx}`, label }));
+    kanban = {
+      id: `kb_${Date.now()}`,
+      name,
+      type: 'board',
+      ownerId: APP.currentUser?.id || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      board: {
+        columns,
+        cards: [],
+        cardFields: [
+          { key: 'description', label: 'Descripción', type: 'textarea' },
+          { key: 'responsable', label: 'Responsable', type: 'text' },
+          { key: 'etiquetas', label: 'Etiquetas', type: 'tags' }
+        ]
+      },
+      permissions: 'private',
+      sharedWith: []
+    };
+  } else {
+    const config = {
+      filterByConsultor: document.getElementById('kbFilterByConsultor')?.checked,
+      consultor: document.getElementById('kbConsultor')?.value,
+      filterByPais: document.getElementById('kbFilterByPais')?.checked,
+      pais: document.getElementById('kbPais')?.value,
+      onlyAlert: document.getElementById('kbOnlyAlert')?.checked
+    };
+    kanban = {
+      id: `kb_${Date.now()}`,
+      name,
+      type: 'view',
+      ownerId: APP.currentUser?.id || null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      config,
+      permissions: 'private',
+      sharedWith: []
+    };
+  }
+
+  if(!APP_CUSTOM_KANBANS) APP_CUSTOM_KANBANS = [];
+  APP_CUSTOM_KANBANS.push(kanban);
+  saveCustomKanbans();
+  renderKanbanTabs();
+  switchKanbanTab(kanban.id);
+  document.querySelector('.modal-overlay')?.remove();
+  toast('success', 'Kanban creado: ' + name);
 }
 
 function deleteCustomKanban(id){
@@ -5780,8 +6066,7 @@ async function updateKanbanShare(kbId, userId, shouldShare) {
 }
 
 function getActiveKanbanFilters(){
-  if(APP_ACTIVE_KANBAN === 'default') return null;
-  return APP_CUSTOM_KANBANS.find(kb => kb.id === APP_ACTIVE_KANBAN);
+  return getActiveKanban();
 }
 
 // ================================================================

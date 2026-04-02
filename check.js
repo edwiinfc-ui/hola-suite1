@@ -286,7 +286,9 @@ function canUseServerProxy(){
 }
 
 async function postJson(url, body){
-  const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const headers={'Content-Type':'application/json'};
+  if(APP?.token)headers.Authorization=`Bearer ${APP.token}`;
+  const resp=await fetch(url,{method:'POST',headers,body:JSON.stringify(body)});
   const json=await resp.json().catch(()=>({}));
   if(!resp.ok)throw new Error(json?.error||`HTTP ${resp.status}`);
   return json;
@@ -2424,7 +2426,7 @@ function getClientKanbanStageKey(client){
 async function syncKanbanStatusToClickUp(client,status){
   const apiKey=(document.getElementById('cfgApiKey')?.value||CONFIG.API_KEY||'').trim();
   if(!apiKey||!canUseServerProxy())throw new Error('Backend o API Key de ClickUp no disponible');
-  await postJson(`/api/clickup/task/${encodeURIComponent(client.id)}/status`,{apiKey,status});
+  await postJson(`/api/clickup/task/${encodeURIComponent(client.id)}/status`,{status});
 }
 
 async function moveKanbanCard(clientId, stageKey){
@@ -3240,7 +3242,7 @@ async function fetchHolaConvs(){
     const {plain,api}=getHolaApiBases(url);
     let resolvedPath='/atendimento';
     if(canUseServerProxy()){
-      const proxyJson=await postJson('/api/opa/conversations',{baseUrl:url,token,workspace:ws});
+      const proxyJson=await postJson('/api/opa/conversations',{workspace:ws});
       APP.holaDepartments=proxyJson.departments||{};
       APP.holaConversations=(Array.isArray(proxyJson.conversations)?proxyJson.conversations:[]).map(normalizeHolaConversation);
       resolvedPath=proxyJson.path||resolvedPath;
@@ -3306,7 +3308,7 @@ async function showConvDetail(id){
   try{
     let detail;
     if(canUseServerProxy()){
-      const proxyJson=await postJson(`/api/opa/attendance/${encodeURIComponent(c.id)}/detail`,{baseUrl:url,token});
+      const proxyJson=await postJson(`/api/opa/attendance/${encodeURIComponent(c.id)}/detail`,{});
       detail=proxyJson.detail||{};
     }else{
       const headers={Authorization:getHolaAuthHeader(token),'Content-Type':'application/json'};
@@ -3464,7 +3466,7 @@ function addKanbanTag(clientId){
   persistKanbanMeta();
   const apiKey=(document.getElementById('cfgApiKey')?.value||CONFIG.API_KEY||'').trim();
   if(apiKey&&canUseServerProxy()){
-    postJson(`/api/clickup/task/${encodeURIComponent(clientId)}/tag`,{apiKey,tag})
+    postJson(`/api/clickup/task/${encodeURIComponent(clientId)}/tag`,{tag})
       .then(()=>{
         meta.lastSyncStatus='tag_synced';
         persistKanbanMeta();
@@ -3608,7 +3610,7 @@ async function saveKanbanComment(clientId, syncClickUp=false){
     try{
       const apiKey=(document.getElementById('cfgApiKey')?.value||CONFIG.API_KEY||'').trim();
       if(!apiKey||!canUseServerProxy())throw new Error('Backend o API Key de ClickUp no disponible');
-      await postJson(`/api/clickup/task/${encodeURIComponent(clientId)}/comment`,{apiKey,comment:text});
+      await postJson(`/api/clickup/task/${encodeURIComponent(clientId)}/comment`,{comment:text});
       meta.lastSyncStatus='comment_synced';
       persistKanbanMeta();
       toast('success','Comentario enviado a ClickUp');

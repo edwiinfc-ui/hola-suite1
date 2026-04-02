@@ -2,9 +2,13 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
+<meta name="apple-mobile-web-app-capable" content="true">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0D0D1A">
 <title>VY - LEX — Control Center v2</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="/css/responsive.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
@@ -2561,7 +2565,9 @@ function canUseServerProxy(){
 }
 
 async function postJson(url, body){
-  const resp=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const headers={'Content-Type':'application/json'};
+  if(APP?.token)headers.Authorization=`Bearer ${APP.token}`;
+  const resp=await fetch(url,{method:'POST',headers,body:JSON.stringify(body)});
   const json=await resp.json().catch(()=>({}));
   if(!resp.ok)throw new Error(json?.error||`HTTP ${resp.status}`);
   return json;
@@ -2958,8 +2964,7 @@ async function doLogin(){
     // Guardar token y datos del usuario
     APP.token = token;
     APP.currentUser = user;
-    CONFIG.API_KEY = clickup?.apiKey || CONFIG.API_KEY || 'pk_9905747_YA8JWPKAC2GPO5MRWL74KLTCU5918QQG';
-    CONFIG.LIST_ID = clickup?.listId || CONFIG.LIST_ID || '9002104190';
+    CONFIG.LIST_ID = clickup?.listId || CONFIG.LIST_ID || '';
     
     // Transición al dashboard
     const scr=document.getElementById('loginScreen');
@@ -3579,6 +3584,34 @@ function renderCancelados(){
 // ================================================================
 // CLICKUP API
 // ================================================================
+function safeLocalStorageSet(key, value){
+  try{
+    localStorage.setItem(key, value);
+    return true;
+  }catch(e){
+    const msg=String(e&&e.name||e||'');
+    if(msg.includes('QuotaExceededError')){
+      try{ localStorage.removeItem('holaLastRawTasks'); }catch{}
+      try{ localStorage.removeItem(key); }catch{}
+      try{ localStorage.setItem(key, value); return true; }catch{}
+    }
+    return false;
+  }
+}
+
+function computeClickUpTasksFingerprint(tasks){
+  if(!Array.isArray(tasks)||!tasks.length)return '';
+  const parts=[];
+  const take=Math.min(tasks.length,500);
+  for(let i=0;i<take;i++){
+    const t=tasks[i]||{};
+    const status=t.status?.status||'';
+    const updated=t.date_updated||t.date_closed||t.date_created||'';
+    parts.push(`${t.id||''}:${status}:${updated}`);
+  }
+  return `${tasks.length}|${parts.join('|')}`;
+}
+
 async function syncClickUp(){
   if(APP.syncing)return;
   APP.syncing=true;
@@ -3597,11 +3630,11 @@ async function syncClickUp(){
     if(tasks&&tasks.length>0){
       updateLoadingMsg(`${t('toast.processing','Procesando')} ${tasks.length} ${t('toast.tasks','tareas')}...`);
       APP.lastRawTasks=tasks;
-      localStorage.setItem('holaLastRawTasks', JSON.stringify(tasks));
+      safeLocalStorageSet('holaLastRawTasksFingerprint', computeClickUpTasksFingerprint(tasks));
       APP.data=hydrateClients(processTasksToClients(tasks));
       APP.lastSync=new Date();
       APP.apiMeta={source:'clickup',taskCount:tasks.length,syncedAt:APP.lastSync.toISOString()};
-      localStorage.setItem('holaData',JSON.stringify({data:APP.data,ts:Date.now(),meta:APP.apiMeta}));
+      safeLocalStorageSet('holaData',JSON.stringify({data:APP.data,ts:Date.now(),meta:APP.apiMeta}));
       APP.filteredByDate=applyDateFilter(APP.data);
       updateLoadingMsg(t('toast.rendering','Renderizando...'));
       await new Promise(r=>setTimeout(r,300));
@@ -4253,8 +4286,8 @@ function loadSavedData(){
   if(savedLogs){try{APP.clientLogs=JSON.parse(savedLogs)||{};}catch{}}
   const savedClientOverrides=localStorage.getItem('holaClientOverrides');
   if(savedClientOverrides){try{APP.clientOverrides=JSON.parse(savedClientOverrides)||{};}catch{}}
-  const savedTasks=localStorage.getItem('holaLastRawTasks');
-  if(savedTasks){try{APP.lastRawTasks=JSON.parse(savedTasks)||[];}catch{}}
+  // Limpieza: versiones previas guardaban tareas crudas y podían exceder cuota
+  try{localStorage.removeItem('holaLastRawTasks');}catch{}
   const savedKanban=localStorage.getItem('holaKanbanMeta');
   if(savedKanban){try{APP.kanbanMeta=JSON.parse(savedKanban)||{};}catch{}}
   loadCustomKanbans();
@@ -5069,9 +5102,8 @@ function getClientKanbanStageKey(client){
 }
 
 async function syncKanbanStatusToClickUp(client,status){
-  const apiKey=(document.getElementById('cfgApiKey')?.value||CONFIG.API_KEY||'').trim();
-  if(!apiKey||!canUseServerProxy())throw new Error('Backend o API Key de ClickUp no disponible');
-  await postJson(`/api/clickup/task/${encodeURIComponent(client.id)}/status`,{apiKey,status});
+  if(!canUseServerProxy())throw new Error('Backend no disponible');
+  await postJson(`/api/clickup/task/${encodeURIComponent(client.id)}/status`,{status});
 }
 
 async function moveKanbanCard(clientId, stageKey){
@@ -6491,13 +6523,13 @@ async function fetchHolaConvs(){
   const ws=sanitizeHolaWorkspace(document.getElementById('cfgHolaWs')?.value,url);
   const wsInput=document.getElementById('cfgHolaWs');
   if(wsInput&&wsInput.value.trim()!==ws)wsInput.value=ws;
-  if(!url||!token){toast('warning',t('toast.configure_url_token_first','Configura la URL y Token de API primero'));showSection('config');return;}
+  if(!canUseServerProxy() && (!url||!token)){toast('warning',t('toast.configure_url_token_first','Configura la URL y Token de API primero'));showSection('config');return;}
   showLoading(true,t('toast.syncing_conversations','Sincronizando conversaciones...'));
   try{
     const {plain,api}=getHolaApiBases(url);
     let resolvedPath='/atendimento';
     if(canUseServerProxy()){
-      const proxyJson=await postJson('/api/opa/conversations',{baseUrl:url,token,workspace:ws});
+      const proxyJson=await postJson('/api/opa/conversations',{workspace:ws});
       APP.holaDepartments=proxyJson.departments||{};
       APP.holaConversations=(Array.isArray(proxyJson.conversations)?proxyJson.conversations:[]).map(normalizeHolaConversation);
       resolvedPath=proxyJson.path||resolvedPath;
@@ -6556,14 +6588,14 @@ async function showConvDetail(id){
   openModal('opaConvModal');
   const url=normalizeHolaBaseUrl(document.getElementById('cfgHolaUrl')?.value);
   const token=document.getElementById('cfgHolaToken')?.value;
-  if(!url||!token){
+  if(!canUseServerProxy() && (!url||!token)){
     setHtml('opaConvModalContent','<div class="no-data" style="padding:18px">Falta URL o token para consultar el detalle.</div>');
     return;
   }
   try{
     let detail;
     if(canUseServerProxy()){
-      const proxyJson=await postJson(`/api/opa/attendance/${encodeURIComponent(c.id)}/detail`,{baseUrl:url,token});
+      const proxyJson=await postJson(`/api/opa/attendance/${encodeURIComponent(c.id)}/detail`,{});
       detail=proxyJson.detail||{};
     }else{
       const headers={Authorization:getHolaAuthHeader(token),'Content-Type':'application/json'};
@@ -6719,9 +6751,8 @@ function addKanbanTag(clientId){
   if(!meta.tags.includes(tag))meta.tags.unshift(tag);
   meta.lastSyncStatus='tag_pending';
   persistKanbanMeta();
-  const apiKey=(document.getElementById('cfgApiKey')?.value||CONFIG.API_KEY||'').trim();
-  if(apiKey&&canUseServerProxy()){
-    postJson(`/api/clickup/task/${encodeURIComponent(clientId)}/tag`,{apiKey,tag})
+  if(canUseServerProxy()){
+    postJson(`/api/clickup/task/${encodeURIComponent(clientId)}/tag`,{tag})
       .then(()=>{
         meta.lastSyncStatus='tag_synced';
         persistKanbanMeta();
@@ -6866,14 +6897,13 @@ async function saveKanbanComment(clientId, syncClickUp=false){
   
   if(syncClickUp){
     try{
-      const apiKey=(document.getElementById('cfgApiKey')?.value||CONFIG.API_KEY||'').trim();
-      if(!apiKey||!canUseServerProxy())throw new Error('Backend o API Key de ClickUp no disponible');
+      if(!canUseServerProxy())throw new Error('Backend no disponible');
       
       // Usar clickupTaskId si existe
       const taskId=client?.clickupTaskId;
       if(!taskId)throw new Error('No se encontró ID de tarea en ClickUp para este cliente');
       
-      await postJson(`/api/clickup/task/${encodeURIComponent(taskId)}/comment`,{apiKey,comment:text});
+      await postJson(`/api/clickup/task/${encodeURIComponent(taskId)}/comment`,{comment:text});
       meta.lastSyncStatus='comment_synced';
       persistKanbanMeta();
       toast('success','Comentario enviado a ClickUp ✓');
@@ -10851,6 +10881,9 @@ async function mostrarDialogoImportAvanzado() {
   }
 }
 
+<!-- Scripts de Responsive Design -->
+<script src="/js/responsive-manager.js"></script>
+<script src="/js/session-persistence.js"></script>
 </script>
 </body>
 </html>

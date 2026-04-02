@@ -403,10 +403,11 @@ function sendPublicFile(res, filename) {
 }
 
 function getClickUpApiKey(explicitKey = '') {
-  const apiKey = String(explicitKey || CONFIG.CLICKUP_API_KEY || '').trim();
+  const globalConfig = readGlobalConfig();
+  const apiKey = String(globalConfig.clickupApiKey || CONFIG.CLICKUP_API_KEY || '').trim();
   if (!apiKey) {
-    const err = new Error('Falta API Key de ClickUp');
-    err.statusCode = 400;
+    const err = new Error('Falta API Key de ClickUp (configura CLICKUP_API_KEY o /api/config/global)');
+    err.statusCode = 503;
     throw err;
   }
   return apiKey;
@@ -917,17 +918,16 @@ app.post('/api/auth/login', (req, res) => {
     { expiresIn:'8h' }
   );
   
-  // Obtener configuración global guardada
+  // Obtener configuración global guardada (sin exponer secretos al cliente)
   const globalConfig = readGlobalConfig();
-  const apiKey = globalConfig.clickupApiKey || process.env.CLICKUP_API_KEY;
   const listId = globalConfig.clickupListId || process.env.CLICKUP_LIST_ID;
   
   res.json({ 
     token, 
     user:{ id:user.id, name:user.name, role:user.role, username:user.username },
     clickup: {
-      apiKey: apiKey || 'pk_9905747_YA8JWPKAC2GPO5MRWL74KLTCU5918QQG',
-      listId: listId || '9002104190'
+      configured: Boolean(globalConfig.clickupApiKey || process.env.CLICKUP_API_KEY),
+      listId: listId || ''
     }
   });
 });
@@ -964,8 +964,8 @@ app.post('/api/auth/register', (req, res) => {
     token,
     user: { id:newUser.id, name:newUser.name, role:newUser.role, username:newUser.username },
     clickup: {
-      apiKey: process.env.CLICKUP_API_KEY,
-      listId: process.env.CLICKUP_LIST_ID
+      configured: Boolean(process.env.CLICKUP_API_KEY),
+      listId: process.env.CLICKUP_LIST_ID || ''
     }
   });
 });
@@ -1095,7 +1095,12 @@ app.delete('/api/users/:id', auth, (req, res) => {
 app.get('/api/config/global', auth, (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
   const config = readGlobalConfig();
-  res.json(config);
+  const safe = { ...config };
+  if (safe.clickupApiKey) safe.clickupApiKey = '********';
+  if (safe.holaToken) safe.holaToken = '********';
+  safe.hasClickupApiKey = Boolean(config.clickupApiKey || process.env.CLICKUP_API_KEY);
+  safe.hasHolaToken = Boolean(config.holaToken || process.env.HOLA_API_TOKEN);
+  res.json(safe);
 });
 
 app.post('/api/config/global', auth, (req, res) => {
@@ -1110,7 +1115,12 @@ app.post('/api/config/global', auth, (req, res) => {
   if (req.body.holaWs !== undefined) config.holaWs = req.body.holaWs;
   
   writeGlobalConfig(config);
-  res.json({ ok: true, config });
+  const safe = { ...config };
+  if (safe.clickupApiKey) safe.clickupApiKey = '********';
+  if (safe.holaToken) safe.holaToken = '********';
+  safe.hasClickupApiKey = Boolean(config.clickupApiKey || process.env.CLICKUP_API_KEY);
+  safe.hasHolaToken = Boolean(config.holaToken || process.env.HOLA_API_TOKEN);
+  res.json({ ok: true, config: safe });
 });
 
 // ================================================================
@@ -1736,9 +1746,14 @@ app.get('/api/buscar', auth, async (req, res) => {
 // ================================================================
 // RUTAS - OPA / HOLA SUITE PROXY
 // ================================================================
-app.post('/api/opa/test', async (req, res) => {
+app.post('/api/opa/test', auth, async (req, res) => {
   try {
-    const { baseUrl, token, workspace } = req.body || {};
+    const globalConfig = readGlobalConfig();
+    const baseUrl = req.user.role === 'admin'
+      ? (req.body?.baseUrl || globalConfig.holaUrl || process.env.HOLA_API_URL)
+      : (globalConfig.holaUrl || process.env.HOLA_API_URL);
+    const token = req.user.role === 'admin' ? (req.body?.token || globalConfig.holaToken || process.env.HOLA_API_TOKEN) : (globalConfig.holaToken || process.env.HOLA_API_TOKEN);
+    const workspace = req.user.role === 'admin' ? (req.body?.workspace || globalConfig.holaWs) : globalConfig.holaWs;
     const result = await fetchHolaConversationsRemote(baseUrl, token, workspace);
     res.json({
       ok: true,
@@ -1751,9 +1766,14 @@ app.post('/api/opa/test', async (req, res) => {
   }
 });
 
-app.post('/api/opa/conversations', async (req, res) => {
+app.post('/api/opa/conversations', auth, async (req, res) => {
   try {
-    const { baseUrl, token, workspace } = req.body || {};
+    const globalConfig = readGlobalConfig();
+    const baseUrl = req.user.role === 'admin'
+      ? (req.body?.baseUrl || globalConfig.holaUrl || process.env.HOLA_API_URL)
+      : (globalConfig.holaUrl || process.env.HOLA_API_URL);
+    const token = req.user.role === 'admin' ? (req.body?.token || globalConfig.holaToken || process.env.HOLA_API_TOKEN) : (globalConfig.holaToken || process.env.HOLA_API_TOKEN);
+    const workspace = req.user.role === 'admin' ? (req.body?.workspace || globalConfig.holaWs) : globalConfig.holaWs;
     const result = await fetchHolaConversationsRemote(baseUrl, token, workspace);
     
     // Auto-analyze conversations
@@ -1770,9 +1790,13 @@ app.post('/api/opa/conversations', async (req, res) => {
   }
 });
 
-app.post('/api/opa/attendance/:id/detail', async (req, res) => {
+app.post('/api/opa/attendance/:id/detail', auth, async (req, res) => {
   try {
-    const { baseUrl, token } = req.body || {};
+    const globalConfig = readGlobalConfig();
+    const baseUrl = req.user.role === 'admin'
+      ? (req.body?.baseUrl || globalConfig.holaUrl || process.env.HOLA_API_URL)
+      : (globalConfig.holaUrl || process.env.HOLA_API_URL);
+    const token = req.user.role === 'admin' ? (req.body?.token || globalConfig.holaToken || process.env.HOLA_API_TOKEN) : (globalConfig.holaToken || process.env.HOLA_API_TOKEN);
     const detail = await fetchHolaAttendanceDetailRemote(baseUrl, token, req.params.id);
     res.json({ ok: true, detail });
   } catch (e) {
@@ -1780,9 +1804,9 @@ app.post('/api/opa/attendance/:id/detail', async (req, res) => {
   }
 });
 
-app.post('/api/clickup/task/:id/status', async (req, res) => {
+app.post('/api/clickup/task/:id/status', auth, async (req, res) => {
   try {
-    const apiKey = getClickUpApiKey(req.body?.apiKey);
+    const apiKey = getClickUpApiKey();
     const status = String(req.body?.status || '').trim();
     if (!status) return res.status(400).json({ error: 'Status requerido' });
     const resp = await fetch(`https://api.clickup.com/api/v2/task/${encodeURIComponent(req.params.id)}`, {
@@ -1802,10 +1826,10 @@ app.post('/api/clickup/task/:id/status', async (req, res) => {
   }
 });
 
-app.post('/api/clickup/task/:id/comment', async (req, res) => {
+app.post('/api/clickup/task/:id/comment', auth, async (req, res) => {
   try {
     const taskId = req.params.id;
-    const apiKey = getClickUpApiKey(req.body?.apiKey);
+    const apiKey = getClickUpApiKey();
     const comment = String(req.body?.comment || '').trim();
     
     if (!comment) {
@@ -1842,9 +1866,9 @@ app.post('/api/clickup/task/:id/comment', async (req, res) => {
   }
 });
 
-app.post('/api/clickup/task/:id/tag', async (req, res) => {
+app.post('/api/clickup/task/:id/tag', auth, async (req, res) => {
   try {
-    const apiKey = getClickUpApiKey(req.body?.apiKey);
+    const apiKey = getClickUpApiKey();
     const tag = String(req.body?.tag || '').trim();
     if (!tag) return res.status(400).json({ error: 'Tag requerida' });
     const resp = await fetch(`https://api.clickup.com/api/v2/task/${encodeURIComponent(req.params.id)}/tag/${encodeURIComponent(tag)}`, {

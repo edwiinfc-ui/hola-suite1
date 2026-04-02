@@ -25,6 +25,8 @@ pids/
 *.swo
 *~
 .DS_Store
+.codex
+.codex/
 
 # Build outputs
 dist/

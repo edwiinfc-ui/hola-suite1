@@ -592,7 +592,18 @@ tbody td{padding:10px 13px;font-size:12px;vertical-align:middle}
     </div>
     <div class="login-field">
       <label>Contraseña</label>
-      <input type="password" id="loginPassword" placeholder="••••••••">
+      <div style="position:relative;display:flex;align-items:center">
+        <input type="password" id="loginPassword" placeholder="••••••••" style="width:100%;padding-right:44px">
+        <button type="button" id="togglePasswordBtn" class="topbar-icon" aria-label="Ver contraseña" title="Ver contraseña" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:10px">
+          <i class="fa fa-eye"></i>
+        </button>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(232,232,240,.75);cursor:pointer;user-select:none">
+        <input type="checkbox" id="rememberMe" style="accent-color:var(--primary)">
+        Recordarme / Mantener conectado
+      </label>
     </div>
     <button class="login-btn" id="loginBtn"><i class="fa fa-arrow-right-to-bracket"></i> Conectar</button>
 
@@ -2947,7 +2958,9 @@ function initializeWithShareToken() {
 const SESSION_KEYS = {
   token: 'hola_suite_token',
   user: 'hola_suite_user',
-  ts: 'hola_suite_timestamp'
+  ts: 'hola_suite_timestamp',
+  rememberedUser: 'hola_suite_remembered_user',
+  rememberFlag: 'hola_suite_remember_me'
 };
 
 function saveSession(token, user){
@@ -2965,6 +2978,28 @@ function clearSession(){
   try{ localStorage.removeItem(SESSION_KEYS.token); }catch{}
   try{ localStorage.removeItem(SESSION_KEYS.user); }catch{}
   try{ localStorage.removeItem(SESSION_KEYS.ts); }catch{}
+}
+
+function saveRememberedLogin(email, remember){
+  try{
+    localStorage.setItem(SESSION_KEYS.rememberFlag, remember ? '1' : '0');
+    if(remember && email){
+      localStorage.setItem(SESSION_KEYS.rememberedUser, email);
+    }else{
+      localStorage.removeItem(SESSION_KEYS.rememberedUser);
+    }
+  }catch{}
+}
+
+function applyRememberedLoginToForm(){
+  try{
+    const remember = localStorage.getItem(SESSION_KEYS.rememberFlag) === '1';
+    const email = localStorage.getItem(SESSION_KEYS.rememberedUser) || '';
+    const emailEl = document.getElementById('loginEmail');
+    const rememberEl = document.getElementById('rememberMe');
+    if(rememberEl) rememberEl.checked = remember;
+    if(emailEl && email && !emailEl.value) emailEl.value = email;
+  }catch{}
 }
 
 function readSession(){
@@ -3017,6 +3052,7 @@ async function restoreSessionIfValid(){
 async function doLogin(){
   const email=document.getElementById('loginEmail')?.value?.trim();
   const pass=document.getElementById('loginPassword')?.value;
+  const remember = Boolean(document.getElementById('rememberMe')?.checked);
   
   if(!email || !pass) {
     showError('Ingresa email y contraseña');
@@ -3061,6 +3097,7 @@ async function doLogin(){
     APP.currentUser = user;
     CONFIG.LIST_ID = clickup?.listId || CONFIG.LIST_ID || '';
     saveSession(token, user);
+    saveRememberedLogin(email, remember);
     
     // Transición al dashboard
     const scr=document.getElementById('loginScreen');
@@ -3220,6 +3257,7 @@ function disconnectFromServerEvents() {
 // Verificar si hay share token al cargar
 window.addEventListener('DOMContentLoaded', () => {
   if (!initializeWithShareToken()) {
+    applyRememberedLoginToForm();
     restoreSessionIfValid();
   }
 });
@@ -3237,6 +3275,16 @@ window.addEventListener('storage', (e) => {
 });
 
 document.getElementById('loginPassword').addEventListener('keypress',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('togglePasswordBtn')?.addEventListener('click', () => {
+  const input = document.getElementById('loginPassword');
+  const btn = document.getElementById('togglePasswordBtn');
+  if(!input || !btn) return;
+  const isPassword = input.type === 'password';
+  input.type = isPassword ? 'text' : 'password';
+  btn.title = isPassword ? 'Ocultar contraseña' : 'Ver contraseña';
+  btn.setAttribute('aria-label', btn.title);
+  btn.innerHTML = isPassword ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
+});
 document.getElementById('loginBtn')?.addEventListener('click', doLogin);
 document.getElementById('newKanbanBtn')?.addEventListener('click', showCreateKanbanModal);
 

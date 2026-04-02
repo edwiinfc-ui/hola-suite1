@@ -115,7 +115,11 @@ async function login(req, res) {
       
       res.status(200).json({
         token,
-        user: { email, role: 'admin' }
+        user: { email, role: 'admin' },
+        clickup: {
+          configured: Boolean((process.env.CLICKUP_API_KEY || '').trim()),
+          listId: (process.env.CLICKUP_LIST_ID || '').trim()
+        }
       });
     } else {
       res.status(401).json({ error: 'Credenciales inválidas' });

@@ -233,7 +233,9 @@ function normalizeHolaBaseUrl(url) {
 function normalizeHolaApiBase(url) {
   const base = normalizeHolaBaseUrl(url);
   if (!base) return '';
-  return /\/api\/v1$/i.test(base) ? base : `${base}/api/v1`;
+  if (/\/api\/v1$/i.test(base)) return base;
+  if (/\/api$/i.test(base)) return `${base}/v1`;
+  return `${base}/api/v1`;
 }
 
 function getHolaAuthHeader(token) {

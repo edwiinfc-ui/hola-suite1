@@ -1626,7 +1626,7 @@ tbody td{padding:10px 13px;font-size:12px;vertical-align:middle}
         </div>
         <div class="config-card">
           <div class="config-title"><i class="fa fa-message"></i> ¡Hola! / Opa Suite API <span class="info-tip" data-tip="Conecta con la API de Hola Suite para ver conversaciones y activar el módulo OPA.">i</span></div>
-          <div class="config-field"><label>URL Base <span class="info-tip" data-tip="URL completa incluyendo /api/v1. Ej: https://wispro.holasuite.com/api/v1">i</span></label><input type="text" id="cfgHolaUrl" placeholder="https://wispro.holasuite.com/api/v1"></div>
+          <div class="config-field"><label>URL Base <span class="info-tip" data-tip="URL base de ¡Hola! Suite. Puede terminar en /api o /api/v1 (el sistema normaliza a /api/v1). Ej: https://wispro.holasuite.com/api">i</span></label><input type="text" id="cfgHolaUrl" placeholder="https://wispro.holasuite.com/api"></div>
           <div class="config-field"><label>Token de Acceso</label><input type="password" id="cfgHolaToken" placeholder="Bearer token..."></div>
           <div class="config-field"><label>Workspace ID <span class="info-tip" data-tip="Déjalo vacío si usas Opa/Hola con /atendimento. No pegues aquí la URL base.">i</span></label><input type="text" id="cfgHolaWs" placeholder="Opcional: workspace-id"></div>
           <div class="config-field"><label>Webhook Slack CS</label><input type="text" id="cfgSlackCsWebhook" placeholder="https://hooks.slack.com/services/..."></div>
@@ -2536,7 +2536,9 @@ function normalizeHolaBaseUrl(url){
 function normalizeHolaApiBase(url){
   const base=normalizeHolaBaseUrl(url);
   if(!base)return'';
-  return /\/api\/v1$/i.test(base)?base:`${base}/api/v1`;
+  if(/\/api\/v1$/i.test(base))return base;
+  if(/\/api$/i.test(base))return `${base}/v1`;
+  return `${base}/api/v1`;
 }
 
 function getHolaApiBases(url){

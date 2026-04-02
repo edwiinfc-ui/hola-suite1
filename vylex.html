@@ -3288,6 +3288,13 @@ document.getElementById('togglePasswordBtn')?.addEventListener('click', () => {
 document.getElementById('loginBtn')?.addEventListener('click', doLogin);
 document.getElementById('newKanbanBtn')?.addEventListener('click', showCreateKanbanModal);
 
+// Normalizar URL de ¡Hola! Suite para incluir /api/v1
+document.getElementById('cfgHolaUrl')?.addEventListener('blur', (e) => {
+  const el = e.target;
+  const normalized = normalizeHolaApiBase(el?.value || '');
+  if (normalized && el && el.value !== normalized) el.value = normalized;
+});
+
 // ================================================================
 // NAVIGATION
 // ================================================================

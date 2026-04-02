@@ -68,6 +68,118 @@ async function getClickUpTasks(req, res) {
   }
 }
 
+async function requireClickUpConfig(res) {
+  const apiKey = (process.env.CLICKUP_API_KEY || '').trim();
+  const listId = (process.env.CLICKUP_LIST_ID || '').trim();
+  if (!apiKey || !listId) {
+    res.status(503).json({ error: 'Faltan CLICKUP_API_KEY / CLICKUP_LIST_ID en Vercel' });
+    return null;
+  }
+  return { apiKey, listId };
+}
+
+async function updateClickUpTask(req, res, { pathSuffix = '', body = null, method = 'POST' } = {}) {
+  try {
+    const auth = verificarAuth(req);
+    if (!auth) return res.status(401).json({ error: 'No autorizado' });
+
+    const cfg = await requireClickUpConfig(res);
+    if (!cfg) return;
+
+    const taskId = String(req.query.id || '').trim();
+    if (!taskId) return res.status(400).json({ error: 'Task ID requerido' });
+
+    const url = `https://api.clickup.com/api/v2/task/${encodeURIComponent(taskId)}${pathSuffix}`;
+    const resp = await fetch(url, {
+      method,
+      headers: { Authorization: cfg.apiKey, 'Content-Type': 'application/json' },
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) return res.status(resp.status).json({ error: json?.err || json?.error || `ClickUp HTTP ${resp.status}` });
+    res.status(200).json({ ok: true, data: json });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
+async function setClickUpStatus(req, res) {
+  const status = String(req.body?.status || '').trim();
+  if (!status) return res.status(400).json({ error: 'Status requerido' });
+  return updateClickUpTask(req, res, { method: 'PUT', body: { status } });
+}
+
+async function addClickUpComment(req, res) {
+  const comment = String(req.body?.comment || '').trim();
+  if (!comment) return res.status(400).json({ error: 'Comentario requerido' });
+  return updateClickUpTask(req, res, { pathSuffix: '/comment', method: 'POST', body: { comment_text: comment } });
+}
+
+async function addClickUpTag(req, res) {
+  const tag = String(req.body?.tag || '').trim();
+  if (!tag) return res.status(400).json({ error: 'Etiqueta requerida' });
+  // ClickUp tags endpoint is /task/{task_id}/tag/{tag_name}
+  // Using POST without body.
+  const auth = verificarAuth(req);
+  if (!auth) return res.status(401).json({ error: 'No autorizado' });
+  const cfg = await requireClickUpConfig(res);
+  if (!cfg) return;
+  const taskId = String(req.query.id || '').trim();
+  if (!taskId) return res.status(400).json({ error: 'Task ID requerido' });
+  const url = `https://api.clickup.com/api/v2/task/${encodeURIComponent(taskId)}/tag/${encodeURIComponent(tag)}`;
+  const resp = await fetch(url, { method: 'POST', headers: { Authorization: cfg.apiKey, 'Content-Type': 'application/json' } });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) return res.status(resp.status).json({ error: json?.err || json?.error || `ClickUp HTTP ${resp.status}` });
+  res.status(200).json({ ok: true, data: json });
+}
+
+async function setClickUpCustomField(req, res) {
+  const fieldId = String(req.body?.fieldId || '').trim();
+  const value = req.body?.value;
+  if (!fieldId) return res.status(400).json({ error: 'fieldId requerido' });
+  return updateClickUpTask(req, res, { method: 'PUT', body: { custom_fields: [{ id: fieldId, value }] } });
+}
+
+function verifyPublicApiKey(req) {
+  const expected = String(process.env.PUBLIC_API_KEY || '').trim();
+  if (!expected) return false;
+  const provided = String(req.headers['x-api-key'] || '').trim();
+  return Boolean(provided && provided === expected);
+}
+
+async function publicSearch(req, res) {
+  try {
+    if (!verifyPublicApiKey(req)) return res.status(401).json({ error: 'API key inválida' });
+    const q = String(req.query.q || '').trim().toLowerCase();
+    if (q.length < 2) return res.status(200).json({ results: [] });
+
+    const cfg = await requireClickUpConfig(res);
+    if (!cfg) return;
+
+    // Fetch first pages and filter by name
+    const matches = [];
+    for (let page = 0; page < 10; page++) {
+      const url = `https://api.clickup.com/api/v2/list/${encodeURIComponent(cfg.listId)}/task?page=${page}&include_closed=true&archived=false&subtasks=true`;
+      const resp = await fetch(url, { headers: { Authorization: cfg.apiKey, 'Content-Type': 'application/json' } });
+      if (!resp.ok) break;
+      const json = await resp.json().catch(() => ({}));
+      const tasks = Array.isArray(json.tasks) ? json.tasks : [];
+      for (const t of tasks) {
+        const name = String(t.name || '');
+        if (name.toLowerCase().includes(q) || String(t.id || '').includes(q)) {
+          matches.push({ id: t.id, name, status: t.status?.status || '', url: t.url || '' });
+          if (matches.length >= 20) break;
+        }
+      }
+      if (matches.length >= 20 || tasks.length < 100) break;
+    }
+
+    res.status(200).json({ results: matches });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+
 /**
  * GET /api/auth/me - Obtener usuario actual (JWT)
  */
@@ -308,6 +420,27 @@ module.exports = async (req, res) => {
 
     if (path[0] === 'clickup' && path[1] === 'tasks' && method === 'GET') {
       return getClickUpTasks(req, res);
+    }
+
+    if (path[0] === 'clickup' && path[1] === 'task' && path[2] && path[3] === 'status' && method === 'POST') {
+      req.query.id = path[2];
+      return setClickUpStatus(req, res);
+    }
+    if (path[0] === 'clickup' && path[1] === 'task' && path[2] && path[3] === 'comment' && method === 'POST') {
+      req.query.id = path[2];
+      return addClickUpComment(req, res);
+    }
+    if (path[0] === 'clickup' && path[1] === 'task' && path[2] && path[3] === 'tag' && method === 'POST') {
+      req.query.id = path[2];
+      return addClickUpTag(req, res);
+    }
+    if (path[0] === 'clickup' && path[1] === 'task' && path[2] && path[3] === 'custom-field' && method === 'POST') {
+      req.query.id = path[2];
+      return setClickUpCustomField(req, res);
+    }
+
+    if (path[0] === 'public' && path[1] === 'search' && method === 'GET') {
+      return publicSearch(req, res);
     }
     
     if (path[0] === 'data') {

@@ -3829,6 +3829,18 @@ async function syncClickUp(){
       updateLoadingMsg(`${t('toast.processing','Procesando')} ${tasks.length} ${t('toast.tasks','tareas')}...`);
       APP.lastRawTasks=tasks;
       safeLocalStorageSet('holaLastRawTasksFingerprint', computeClickUpTasksFingerprint(tasks));
+      // Build custom field name -> id map for auto-sync of edits
+      try{
+        const sample=tasks.find(t=>Array.isArray(t?.custom_fields)&&t.custom_fields.length)||tasks[0];
+        const fields=Array.isArray(sample?.custom_fields)?sample.custom_fields:[];
+        const map={};
+        fields.forEach(f=>{
+          const id=String(f?.id||'').trim();
+          const name=String(f?.name||'').trim();
+          if(id&&name) map[normalizeText(name)] = id;
+        });
+        APP.clickupCustomFieldMap=map;
+      }catch{}
       APP.data=hydrateClients(processTasksToClients(tasks));
       APP.lastSync=new Date();
       APP.apiMeta={source:'clickup',taskCount:tasks.length,syncedAt:APP.lastSync.toISOString()};
@@ -9262,7 +9274,7 @@ APP.realtimeSync={
   enabled:false,
   interval:null,
   lastSync:Date.now(),
-  pollInterval:10000, // 10 segundos
+  pollInterval:30000, // 30 segundos
   queue:[], // Cola de cambios pendientes
   lastClickUpState:{}, // Hash de estado de ClickUp
   changeLog:[] // Log de cambios
@@ -9270,11 +9282,8 @@ APP.realtimeSync={
 
 // Iniciar sincronización en tiempo real
 function startRealTimeSync(){
-  const apiKey=document.getElementById('cfgClickupApiKey')?.value.trim();
-  const listId=document.getElementById('cfgClickupListId')?.value.trim();
-  
-  if(!apiKey||!listId){
-    toast('warning','Configura API Key y List ID para sincronización');
+  if(!canUseServerProxy() || !APP?.token){
+    toast('warning','Inicia sesión para sincronización automática');
     return;
   }
   
@@ -9285,7 +9294,7 @@ function startRealTimeSync(){
   
   APP.realtimeSync.enabled=true;
   showRealTimeSyncIndicator(true);
-  toast('success','Sincronización en tiempo real iniciada (cada 10s)');
+  toast('success','Sincronización automática iniciada (cada 30s)');
   
   // Iniciar polling
   APP.realtimeSync.interval=setInterval(()=>{
@@ -9419,8 +9428,7 @@ async function processSyncQueue(){
   if(!APP.realtimeSync.queue.length)return;
   
   const changes=APP.realtimeSync.queue.splice(0, 5); // Procesar 5 cambios por ciclo
-  const apiKey=document.getElementById('cfgClickupApiKey')?.value.trim();
-  if(!apiKey)return;
+  if(!canUseServerProxy() || !APP?.token)return;
   
   for(const change of changes){
     try{
@@ -9435,7 +9443,7 @@ async function processSyncQueue(){
       if(!taskId)continue;
       
       // Enviar a ClickUp
-      await updateClickUpField(taskId, clickupField, change.newValue, apiKey);
+      await updateClickUpField(taskId, clickupField, change.newValue);
       
       // Registrar en change log
       APP.realtimeSync.changeLog.push({
@@ -9453,42 +9461,35 @@ async function processSyncQueue(){
 
 // Mapear campo local a custom field de ClickUp
 function mapLocalFieldToClickUp(localField){
-  const mapping={
-    'rKickoff':'rKickoff',
-    'rVer':'rVer',
-    'rCap':'rCap',
-    'rGoLive':'rGoLive',
-    'rAct':'rAct',
-    'rVenta':'rVenta',
-    'plan':'plan',
-    'pais':'pais',
-    'email':'email',
-    'telefono':'telefono',
-    'presupuesto':'presupuesto',
-    'tipoCliente':'tipoCliente',
-    'industria':'industria'
+  const nameMap={
+    rKickoff:['rkickoff','responsable kickoff','kickoff'],
+    rVer:['rver','responsable verificacion','verificacion','verificación'],
+    rCap:['rcap','responsable capacitacion','capacitacion','capacitación'],
+    rGoLive:['rgolive','responsable go-live','go-live','go live'],
+    rAct:['ract','responsable activacion','activacion','activación'],
+    rVenta:['rventa','responsable venta','venta','vendedor'],
+    plan:['plan','plano'],
+    pais:['pais','país','country'],
+    email:['email','e-mail','correo'],
+    telefono:['telefono','teléfono','phone'],
+    presupuesto:['presupuesto','budget'],
+    tipoCliente:['tipocliente','tipo de cliente','tipo cliente'],
+    industria:['industria','industry']
   };
-  return mapping[localField];
+  const candidates=nameMap[localField];
+  if(!candidates||!APP.clickupCustomFieldMap)return null;
+  for(const name of candidates){
+    const key=normalizeText(name);
+    const id=APP.clickupCustomFieldMap[key];
+    if(id)return id;
+  }
+  return null;
 }
 
 // Actualizar field en ClickUp
-async function updateClickUpField(taskId, fieldId, value, apiKey){
+async function updateClickUpField(taskId, fieldId, value){
   try{
-    const response=await fetch(`https://api.clickup.com/api/v2/task/${taskId}`,{
-      method:'PUT',
-      headers:{
-        'Authorization':apiKey,
-        'Content-Type':'application/json'
-      },
-      body:JSON.stringify({
-        custom_fields:[{id:fieldId, value:String(value)}]
-      })
-    });
-    
-    if(!response.ok){
-      throw new Error(`ClickUp API error: ${response.status}`);
-    }
-    
+    await postJson(`/api/clickup/task/${encodeURIComponent(taskId)}/custom-field`,{fieldId,value});
     return true;
   }catch(e){
     console.error('Error updating ClickUp:',e);
@@ -9498,19 +9499,10 @@ async function updateClickUpField(taskId, fieldId, value, apiKey){
 
 // Obtener cambios de ClickUp
 async function pollClickUpForChanges(){
-  const apiKey=document.getElementById('cfgClickupApiKey')?.value.trim();
-  const listId=document.getElementById('cfgClickupListId')?.value.trim();
-  
-  if(!apiKey||!listId)return;
+  if(!canUseServerProxy() || !APP?.token)return;
   
   try{
-    const response=await fetch(`https://api.clickup.com/api/v2/list/${listId}/task?page=0&limit=100`,{
-      headers:{'Authorization':apiKey, 'Content-Type':'application/json'}
-    });
-    
-    if(!response.ok)throw new Error('Failed to fetch ClickUp tasks');
-    
-    const data=await response.json();
+    const data=await getJson('/api/clickup/tasks');
     const tasks=data.tasks||[];
     
     // Comparar con estado anterior

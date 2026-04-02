@@ -1,0 +1,7 @@
+name = "hola-suite1"
+main = "src/worker.js"
+compatibility_date = "2026-04-02"
+
+# Serve the whole repo as static assets via `env.ASSETS.fetch()`
+assets = { directory = ".", binding = "ASSETS" }
+

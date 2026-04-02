@@ -5540,15 +5540,23 @@ function openBoardCardModal(kbId, cardId){
   const { idx, kb } = getBoardById(kbId);
   const card = kb?.board?.cards?.find(c=>c.id===cardId);
   if(!kb || !card) return;
-  const fields = kb.board.cardFields || [];
   const tags = Array.isArray(card.fields?.etiquetas) ? card.fields.etiquetas.join(', ') : '';
   const desc = String(card.fields?.description || '');
   const resp = String(card.fields?.responsable || '');
+  const members = Array.isArray(kb.board?.members) ? kb.board.members : [];
+  const memberOptions = members.length
+    ? members.map(m=>`<option value="${escHtml(String(m.id))}" ${String(m.id)===resp?'selected':''}>${escHtml(m.name||m.id)}</option>`).join('')
+    : '';
   setHtml('kanbanCardModalContent', `
     <div class="modal-section-title"><i class="fa fa-pen"></i> Tarjeta</div>
     <div class="config-field"><label>Título</label><input type="text" id="boardCardTitle" value="${escHtml(card.title||'')}" /></div>
     <div class="config-field"><label>Descripción</label><textarea id="boardCardDesc" rows="3" style="resize:vertical">${escHtml(desc)}</textarea></div>
-    <div class="config-field"><label>Responsable</label><input type="text" id="boardCardResp" value="${escHtml(resp)}" /></div>
+    <div class="config-field"><label>Responsable</label>
+      <select id="boardCardResp" style="width:100%;padding:9px 12px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:13px">
+        <option value="">—</option>
+        ${memberOptions}
+      </select>
+    </div>
     <div class="config-field"><label>Etiquetas (coma)</label><input type="text" id="boardCardTags" value="${escHtml(tags)}" /></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
       <button class="btn-primary" onclick="saveBoardCard('${kbId}','${cardId}')"><i class="fa fa-floppy-disk"></i> Guardar</button>
@@ -5770,6 +5778,11 @@ function showCreateKanbanModal(){
     
 	    // Asignar evento al botón Crear
 	    document.getElementById('saveKanbanBtn').addEventListener('click', saveNewKanban);
+	    
+	    // Pre-cargar usuarios si es admin (para asignación en kanban board)
+	    if(APP?.token && APP?.currentUser?.role === 'admin' && (!APP.users || !APP.users.length)){
+	      fetchUsersFromServer().catch(()=>{});
+	    }
 
 	    // Cambiar UI según tipo
 	    const typeEl = document.getElementById('newKanbanType');
@@ -5785,10 +5798,28 @@ function showCreateKanbanModal(){
 	              <label style="margin-bottom:6px;font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase">Columnas iniciales (separadas por coma)</label>
 	              <input type="text" id="kbColumns" placeholder="Ej: Por hacer, En progreso, Hecho" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:4px">
 	            </div>
+	            <div class="config-field" style="margin:0">
+	              <label style="margin-bottom:6px;font-size:11px;color:var(--muted);letter-spacing:.8px;text-transform:uppercase">Miembros (usuarios de la plataforma)</label>
+	              <div id="kbMembers" style="display:flex;flex-direction:column;gap:6px;max-height:160px;overflow:auto;padding:8px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.02)"></div>
+	              <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.4">Los miembros aparecen como opciones para asignar responsable dentro de las tarjetas.</div>
+	            </div>
 	            <div style="font-size:11px;color:var(--muted);line-height:1.4">
 	              Crea un kanban totalmente personalizado: columnas, tarjetas y campos dentro de la tarjeta.
 	            </div>
 	          `;
+	        }
+	        const membersEl=document.getElementById('kbMembers');
+	        if(membersEl){
+	          const users=(APP?.currentUser?.role==='admin' ? (APP.users||[]) : [APP.currentUser]).filter(Boolean);
+	          const safeUsers=users.map(u=>({id:String(u.id||u.email||u.username||u.name||''),name:u.name||u.username||u.email||'Usuario'})).filter(u=>u.id);
+	          membersEl.innerHTML = safeUsers.length
+	            ? safeUsers.map(u=>`
+	                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+	                  <input type="checkbox" class="kbMemberCheck" value="${escHtml(u.id)}" checked>
+	                  <span style="font-size:12px">${escHtml(u.name)}</span>
+	                </label>
+	              `).join('')
+	            : `<div style="font-size:11px;color:var(--muted)">Sin usuarios disponibles</div>`;
 	        }
 	      }else{
 	        if(sectionTitleEl) sectionTitleEl.textContent = 'Filtros';
@@ -5866,6 +5897,16 @@ function saveNewKanban(){
     const colsRaw = String(document.getElementById('kbColumns')?.value || '').trim();
     const cols = colsRaw ? colsRaw.split(',').map(s=>s.trim()).filter(Boolean) : ['Por hacer','En progreso','Hecho'];
     const columns = cols.map((label, idx)=>({ id:`col_${Date.now()}_${idx}`, label }));
+    const memberIds = Array.from(document.querySelectorAll('.kbMemberCheck'))
+      .filter(el=>el.checked)
+      .map(el=>String(el.value));
+    const users=(APP?.currentUser?.role==='admin' ? (APP.users||[]) : [APP.currentUser]).filter(Boolean);
+    let members = users
+      .map(u=>({ id:String(u.id||u.email||u.username||u.name||''), name:u.name||u.username||u.email||'Usuario' }))
+      .filter(u=>u.id && memberIds.includes(String(u.id)));
+    if(!members.length && APP.currentUser){
+      members = [{ id:String(APP.currentUser.id||APP.currentUser.email||APP.currentUser.username||'me'), name:APP.currentUser.name||APP.currentUser.username||'Yo' }];
+    }
     kanban = {
       id: `kb_${Date.now()}`,
       name,
@@ -5876,6 +5917,7 @@ function saveNewKanban(){
       board: {
         columns,
         cards: [],
+        members,
         cardFields: [
           { key: 'description', label: 'Descripción', type: 'textarea' },
           { key: 'responsable', label: 'Responsable', type: 'text' },

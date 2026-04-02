@@ -122,6 +122,11 @@ input, select, textarea, button { font: inherit; }
     padding: 8px 10px 8px 30px;
   }
 
+  /* Evitar overflow horizontal por inputs que se expanden en focus */
+  .topbar-search input:focus {
+    width: 100% !important;
+  }
+
   .topbar-actions {
     gap: 6px;
     margin: 0;
@@ -343,6 +348,17 @@ input, select, textarea, button { font: inherit; }
     max-width: unset;
     width: 100%;
   }
+}
+
+/* Tablets / pantallas medias: evitar scroll horizontal en Configuración */
+@media (max-width: 920px) {
+  .topbar-actions { flex-wrap: wrap; }
+  .topbar-search { width: 100%; min-width: 0; }
+  .topbar-search input,
+  .topbar-search input:focus { width: 100% !important; }
+
+  .config-grid { grid-template-columns: 1fr !important; }
+  .config-card { padding: 16px; }
 }
 
 /* ═════════════════════════════════════════════════════════════════════════

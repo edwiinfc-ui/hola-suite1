@@ -2420,6 +2420,118 @@ app.post('/api/opa/attendance/:id/detail', auth, async (req, res) => {
   }
 });
 
+// ================================================================
+// OPA API v1 ENDPOINTS (atendimento + mensagem)
+// ================================================================
+
+app.post('/api/v1/atendimento', auth, async (req, res) => {
+  try {
+    const globalConfig = readGlobalConfig();
+    const baseUrl = req.user.role === 'admin'
+      ? (req.body?.baseUrl || globalConfig.holaUrl || process.env.HOLA_API_URL)
+      : (globalConfig.holaUrl || process.env.HOLA_API_URL);
+    const token = req.user.role === 'admin' ? (req.body?.token || globalConfig.holaToken || process.env.HOLA_API_TOKEN) : (globalConfig.holaToken || process.env.HOLA_API_TOKEN);
+
+    if (!baseUrl || !token) {
+      return res.status(400).json({ error: 'Base URL y token son requeridos' });
+    }
+
+    // Build filter and options from request
+    const filter = req.body?.filter || {};
+    const options = req.body?.options || { limit: 100 };
+
+    // Make request to external OPA API
+    const opaUrl = new URL(baseUrl).origin + '/api/v1/atendimento';
+    const response = await fetch(opaUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ filter, options }),
+      timeout: 30000
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return res.status(response.status).json({
+        error: errorData?.error || `OPA API HTTP ${response.status}`,
+        details: errorData
+      });
+    }
+
+    const data = await response.json();
+
+    // Return data in expected format
+    res.json({
+      ok: true,
+      data: data.data || data.atendimentos || data.conversations || [],
+      total: data.total || (Array.isArray(data.data) ? data.data.length : 0),
+      filter,
+      options
+    });
+  } catch (e) {
+    console.error('Error en /api/v1/atendimento:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/api/v1/atendimento/mensagem', auth, async (req, res) => {
+  try {
+    const globalConfig = readGlobalConfig();
+    const baseUrl = req.user.role === 'admin'
+      ? (req.body?.baseUrl || globalConfig.holaUrl || process.env.HOLA_API_URL)
+      : (globalConfig.holaUrl || process.env.HOLA_API_URL);
+    const token = req.user.role === 'admin' ? (req.body?.token || globalConfig.holaToken || process.env.HOLA_API_TOKEN) : (globalConfig.holaToken || process.env.HOLA_API_TOKEN);
+
+    if (!baseUrl || !token) {
+      return res.status(400).json({ error: 'Base URL y token son requeridos' });
+    }
+
+    // Build filter and options from request
+    const filter = req.body?.filter || {};
+    const options = req.body?.options || { limit: 100 };
+
+    if (!filter.id_rota && !filter.idRota && !filter.attendance_id) {
+      return res.status(400).json({ error: 'id_rota es requerido en filter' });
+    }
+
+    // Make request to external OPA API
+    const opaUrl = new URL(baseUrl).origin + '/api/v1/atendimento/mensagem';
+    const response = await fetch(opaUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ filter, options }),
+      timeout: 30000
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return res.status(response.status).json({
+        error: errorData?.error || `OPA API HTTP ${response.status}`,
+        details: errorData
+      });
+    }
+
+    const data = await response.json();
+
+    // Return data in expected format
+    res.json({
+      ok: true,
+      messages: data.data || data.mensagens || data.messages || [],
+      total: data.total || (Array.isArray(data.data) ? data.data.length : 0),
+      filter,
+      options
+    });
+  } catch (e) {
+    console.error('Error en /api/v1/atendimento/mensagem:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/clickup/task/:id/status', auth, async (req, res) => {
   try {
     const apiKey = getClickUpApiKey();

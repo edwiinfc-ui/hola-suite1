@@ -7,6 +7,9 @@ const jwt        = require('jsonwebtoken');
 const fs         = require('fs');
 const path       = require('path');
 const NodeCache  = require('node-cache');
+const { getUserDashboardConfig, saveUserDashboardConfig } = require('./dashboardConfig');
+const { mapTasksToClients, computeTasksFingerprint, buscarFechaConcluidoFromDetails } = require('./clickupMapper');
+const { importSalesFromSheet, syncSalesWithClients } = require('./salesImporter');
 require('dotenv').config();
 
 const app   = express();
@@ -15,6 +18,8 @@ const cache = new NodeCache({ stdTTL: parseInt(process.env.CACHE_TTL) || 3600 })
 const STATIC_ROOT = __dirname;
 const MAIN_HTML = path.join(STATIC_ROOT, 'vylex.html');
 const FORM_SUBMISSIONS_FILE = path.join(STATIC_ROOT, 'form_submissions.json');
+const REQUESTS_FILE = path.join(STATIC_ROOT, 'requests.json');
+
 const PUBLIC_FILES = new Set([
   'vylex.html',
   'charts.js',
@@ -31,12 +36,20 @@ let cacheMeta = {
 
 app.use(express.json());
 app.use(cors());
+app.use('/css', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+}, express.static(path.join(__dirname, 'css')));
+app.use('/js', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+}, express.static(path.join(__dirname, 'js')));
 
 // ================================================================
 // AUDIT LOG SYSTEM
 // ================================================================
 const LOGS_FILE = path.join(STATIC_ROOT, 'audit_logs.json');
-let clients = []; // For SSE
+let auditSseClients = []; // SSE para auditoría (opcional)
 
 function writeLog(user, action, details) {
   try {
@@ -53,7 +66,11 @@ function writeLog(user, action, details) {
     fs.writeFileSync(LOGS_FILE, JSON.stringify(logs.slice(0, 500), null, 2));
     
     // Broadcast via SSE
-    clients.forEach(c => c.res.write(`data: ${JSON.stringify({ type: 'LOG', data: newLog })}\n\n`));
+    auditSseClients.forEach(c => {
+      try {
+        c.res.write(`event: auditLog\ndata: ${JSON.stringify(newLog)}\n\n`);
+      } catch (_e) {}
+    });
   } catch (e) { console.error('Log error:', e); }
 }
 
@@ -79,7 +96,7 @@ app.use((req, res, next) => {
 const CONFIG = {
   CLICKUP_API_KEY  : (process.env.CLICKUP_API_KEY || '').trim(),
   CLICKUP_LIST_ID  : (process.env.CLICKUP_LIST_ID || '').trim(),
-  JWT_SECRET       : (process.env.JWT_SECRET || '').trim(),
+  JWT_SECRET       : (process.env.JWT_SECRET || 'tu_jwt_secret_super_seguro_aqui').trim(),
   DIAS_META        : { kickoff:3, verificacion:2, instalacion:5, capacitacion:7, activacion:2, total:20 },
   TAREAS_IGNORAR   : ['configurar whatsapp','configurar telefonia','configurar instagram',
                       'configurar messenger','configurar webchat','teste','crear vm'],
@@ -188,11 +205,48 @@ function writeSalesConfig(config) {
   broadcastEvent('salesConfigUpdated', config);
 }
 
+async function fetchGoogleSheetValues(sheetId, sheetName, apiKey) {
+  if (!apiKey) {
+    const err = new Error('Falta Google Sheets API Key (configura global_config.json.googleSheetsApiKey)');
+    err.statusCode = 503;
+    throw err;
+  }
+  if (!sheetId || !sheetName) {
+    const err = new Error('sheetId y sheetName son requeridos');
+    err.statusCode = 400;
+    throw err;
+  }
+  const range = encodeURIComponent(sheetName);
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(sheetId)}/values/${range}?key=${encodeURIComponent(apiKey)}`;
+  const resp = await fetch(url, { timeout: 30000 });
+  if (!resp.ok) {
+    const text = await resp.text().catch(() => '');
+    const err = new Error(`Google Sheets HTTP ${resp.status}: ${text || resp.statusText}`);
+    err.statusCode = resp.status;
+    throw err;
+  }
+  const json = await resp.json();
+  const values = Array.isArray(json?.values) ? json.values : [];
+  if (values.length === 0) return [];
+  const headers = values[0].map(h => String(h || '').trim());
+  const rows = [];
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const obj = {};
+    headers.forEach((h, idx) => {
+      if (!h) return;
+      obj[h] = row[idx] !== undefined ? row[idx] : '';
+    });
+    rows.push(obj);
+  }
+  return rows;
+}
+
 // Notificar eventos a todos los clientes SSE
 function broadcastEvent(type, data) {
   sseClients.forEach(client => {
     try {
-      client.res.write(`data: ${JSON.stringify({ type, data })}\n\n`);
+      client.res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
     } catch (e) {
       // Cliente desconectado
     }
@@ -415,6 +469,17 @@ function getClickUpApiKey(explicitKey = '') {
   return apiKey;
 }
 
+function getClickUpListId(explicitId = '') {
+  const globalConfig = readGlobalConfig();
+  const listId = String(explicitId || globalConfig.clickupListId || CONFIG.CLICKUP_LIST_ID || '').trim();
+  if (!listId) {
+    const err = new Error('Falta List ID de ClickUp (configura CLICKUP_LIST_ID o /api/config/global)');
+    err.statusCode = 503;
+    throw err;
+  }
+  return listId;
+}
+
 function readFormSubmissions() {
   try {
     if (!fs.existsSync(FORM_SUBMISSIONS_FILE)) return [];
@@ -428,6 +493,37 @@ function readFormSubmissions() {
 
 function writeFormSubmissions(items) {
   fs.writeFileSync(FORM_SUBMISSIONS_FILE, JSON.stringify(items, null, 2));
+}
+
+function readRequests() {
+  try {
+    if (!fs.existsSync(REQUESTS_FILE)) return [];
+    return JSON.parse(fs.readFileSync(REQUESTS_FILE, 'utf8'));
+  } catch (e) { return []; }
+}
+function writeRequests(requests) {
+  fs.writeFileSync(REQUESTS_FILE, JSON.stringify(requests, null, 2));
+}
+
+async function createClickUpTask(listId, name, description, tags = []) {
+  const apiKey = getClickUpApiKey();
+  const resp = await fetch(`https://api.clickup.com/api/v2/list/${listId}/task`, {
+    method: 'POST',
+    headers: {
+      Authorization: apiKey,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name,
+      description,
+      tags,
+      status: 'to do'
+    }),
+    timeout: 30000
+  });
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) throw new Error(json?.err || json?.error || `ClickUp HTTP ${resp.status}`);
+  return json;
 }
 
 function findCustomField(cf, names) {
@@ -747,6 +843,8 @@ function procesarTarea(t) {
     modCancelados, modAdicionados,
     canales: { wa, ig, wc, pbx, tg, msg },
     tags          : tagsStr,
+    valorVenta    : getCampo(cf, 'Valor Venta', 'number') || getCampo(cf, 'monto', 'number') || 0,
+    vendedor      : rVenta || '',
     sinReq        : tagsStr.includes('sin requisitos')      ? 'SÍ' : 'NO',
     pausada       : tagsStr.includes('pausada')             ? 'SÍ' : 'NO',
     espCli        : tagsStr.includes('esperando cliente')   ? 'SÍ' : 'NO',
@@ -758,9 +856,20 @@ function procesarTarea(t) {
 // ================================================================
 // CLICKUP: OBTENER TAREAS (con caché)
 // ================================================================
+
+// Acceso al mapa de campos personalizados desde global_config.json
+// Prioridad: global_config > process.env > objeto vacío
+function getClickUpCustomFieldMap() {
+  const cfg = readGlobalConfig();
+  return (cfg.clickupCustomFieldMap && typeof cfg.clickupCustomFieldMap === 'object')
+    ? cfg.clickupCustomFieldMap
+    : {};
+}
+
+
+
 async function obtenerTareasClickUp() {
-  requireEnvConfig(['CLICKUP_API_KEY', 'CLICKUP_LIST_ID']);
-  const CACHE_KEY = 'clickup_tasks';
+  const CACHE_KEY = 'clickup_tasks_raw';
   const cached = cache.get(CACHE_KEY);
   if (cached) {
     cacheMeta.source = 'cache';
@@ -768,33 +877,44 @@ async function obtenerTareasClickUp() {
     return cached;
   }
 
-  const tasks = [];
-  let page   = 0;
-
-  while (page < 20) {
-    const url = `https://api.clickup.com/api/v2/list/${CONFIG.CLICKUP_LIST_ID}/task` +
-                `?page=${page}&include_closed=true&archived=false&subtasks=true`;
-    const res  = await fetch(url, {
-      headers: { 'Authorization': CONFIG.CLICKUP_API_KEY },
-      timeout: 30000
-    });
-    if (!res.ok) throw new Error(`ClickUp API ${res.status}: ${res.statusText}`);
-    const data = await res.json();
-    if (!data.tasks || data.tasks.length === 0) break;
-    tasks.push(...data.tasks);
-    if (data.tasks.length < 100) break;
-    page++;
-    await new Promise(r => setTimeout(r, 400));
+  // Intentar obtener de ClickUp
+  try {
+    const apiKey = getClickUpApiKey();
+    const listId = getClickUpListId();
+    
+    // Usar la función optimizada que ya entrega datos crudos
+    const rawTasks = await obtenerTareasClickUpRaw({ apiKey, listId });
+    
+    cache.set(CACHE_KEY, rawTasks, 1800); // 30 min cache
+    cacheMeta = {
+      lastSyncAt: new Date().toISOString(),
+      source: 'clickup',
+      taskCount: rawTasks.length
+    };
+    return rawTasks;
+  } catch (err) {
+    // Fallback: leer clientes.json generado por el sync completo
+    console.warn('ClickUp no disponible, intentando clientes.json:', err.message);
+    const clientesFileFallback = path.join(STATIC_ROOT, 'data', 'clientes.json');
+    if (fs.existsSync(clientesFileFallback)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(clientesFileFallback, 'utf8'));
+        const clientes = Array.isArray(parsed?.clientes) ? parsed.clientes : [];
+        if (clientes.length > 0) {
+          cache.set(CACHE_KEY, clientes);
+          cacheMeta = {
+            lastSyncAt: parsed.updatedAt || null,
+            source: 'file',
+            taskCount: clientes.length
+          };
+          return clientes;
+        }
+      } catch (fileErr) {
+        console.error('Error leyendo clientes.json:', fileErr.message);
+      }
+    }
+    throw err; // re-lanzar si no hay fallback disponible
   }
-
-  const procesadas = tasks.filter(esValido).map(procesarTarea);
-  cache.set(CACHE_KEY, procesadas);
-  cacheMeta = {
-    lastSyncAt: new Date().toISOString(),
-    source: 'clickup',
-    taskCount: procesadas.length
-  };
-  return procesadas;
 }
 
 function invalidarCache() {
@@ -1108,21 +1228,69 @@ app.get('/api/config/global', auth, (req, res) => {
 app.post('/api/config/global', auth, (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
   const config = readGlobalConfig();
-  
-  // Actualizar con los valores enviados
-  if (req.body.clickupApiKey !== undefined) config.clickupApiKey = req.body.clickupApiKey;
-  if (req.body.clickupListId !== undefined) config.clickupListId = req.body.clickupListId;
-  if (req.body.holaUrl !== undefined) config.holaUrl = req.body.holaUrl;
-  if (req.body.holaToken !== undefined) config.holaToken = req.body.holaToken;
-  if (req.body.holaWs !== undefined) config.holaWs = req.body.holaWs;
-  
+  const b = req.body || {};
+
+  // Campos de integración principal
+  if (b.clickupApiKey  !== undefined) config.clickupApiKey  = b.clickupApiKey;
+  if (b.clickupListId  !== undefined) config.clickupListId  = b.clickupListId;
+  if (b.holaUrl        !== undefined) config.holaUrl        = b.holaUrl;
+  if (b.holaToken      !== undefined) config.holaToken      = b.holaToken;
+  if (b.holaWs         !== undefined) config.holaWs         = b.holaWs;
+
+  // Listas de ClickUp para solicitudes internas
+  if (b.clickupListIdBajas    !== undefined) config.clickupListIdBajas    = b.clickupListIdBajas;
+  if (b.clickupListIdUpgrades !== undefined) config.clickupListIdUpgrades = b.clickupListIdUpgrades;
+
+  // Mapeo de campos personalizados de ClickUp
+  if (b.clickupCustomFieldMap !== undefined && typeof b.clickupCustomFieldMap === 'object') {
+    config.clickupCustomFieldMap = { ...(config.clickupCustomFieldMap || {}), ...b.clickupCustomFieldMap };
+  }
+
+  // Metas por consultor (distribución automática)
+  if (b.consultantMetas !== undefined && typeof b.consultantMetas === 'object') {
+    config.consultantMetas = b.consultantMetas;
+  }
+
+  // Google Sheets (ventas y dominios)
+  if (b.googleSheetsApiKey !== undefined) config.googleSheetsApiKey = b.googleSheetsApiKey;
+  if (b.salesSheetId       !== undefined) config.salesSheetId       = b.salesSheetId;
+  if (b.salesSheetName     !== undefined) config.salesSheetName     = b.salesSheetName;
+  if (b.domainSheetId      !== undefined) config.domainSheetId      = b.domainSheetId;
+  if (b.domainSheetName    !== undefined) config.domainSheetName    = b.domainSheetName;
+
   writeGlobalConfig(config);
   const safe = { ...config };
   if (safe.clickupApiKey) safe.clickupApiKey = '********';
-  if (safe.holaToken) safe.holaToken = '********';
+  if (safe.holaToken)     safe.holaToken     = '********';
   safe.hasClickupApiKey = Boolean(config.clickupApiKey || process.env.CLICKUP_API_KEY);
-  safe.hasHolaToken = Boolean(config.holaToken || process.env.HOLA_API_TOKEN);
+  safe.hasHolaToken     = Boolean(config.holaToken     || process.env.HOLA_API_TOKEN);
   res.json({ ok: true, config: safe });
+});
+
+// ================================================================
+// RUTAS - CONFIGURACIÓN DE DASHBOARD (por usuario/rol)
+// ================================================================
+app.get('/api/dashboard/config', auth, (req, res) => {
+  try {
+    const resolved = getUserDashboardConfig(req.user);
+    res.json(resolved);
+  } catch (e) {
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+app.post('/api/dashboard/config', auth, (req, res) => {
+  try {
+    const widgets = req.body?.widgets;
+    if (!Array.isArray(widgets)) {
+      return res.status(400).json({ error: 'widgets debe ser un array' });
+    }
+    saveUserDashboardConfig(req.user, widgets);
+    writeLog(req.user, 'UPDATE_DASHBOARD_CONFIG', { userId: req.user.id, widgetCount: widgets.length });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
 });
 
 // ================================================================
@@ -1154,7 +1322,7 @@ app.get('/api/events', (req, res) => {
   sseClients.push(client);
   
   // Enviar evento de conexión
-  res.write(`data: ${JSON.stringify({ type: 'connected', data: { userId: user.id } })}\n\n`);
+  res.write(`event: connected\ndata: ${JSON.stringify({ userId: user.id })}\n\n`);
   
   // Mantener conexión viva
   const keepAlive = setInterval(() => {
@@ -1165,6 +1333,26 @@ app.get('/api/events', (req, res) => {
   req.on('close', () => {
     clearInterval(keepAlive);
     sseClients = sseClients.filter(c => c.res !== res);
+  });
+});
+
+// SSE opcional para auditoría (no usado por el frontend principal)
+app.get('/api/audit/events', auth, (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+
+  const clientId = Date.now();
+  const client = { id: clientId, res };
+  auditSseClients.push(client);
+
+  const keepAlive = setInterval(() => res.write(`:keepalive\n\n`), 30000);
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    auditSseClients = auditSseClients.filter(c => c.id !== clientId);
   });
 });
 
@@ -1423,6 +1611,169 @@ app.get('/api/sales/consultores', auth, (req, res) => {
   }
 });
 
+// Importar leads/ventas desde Google Sheets (API v4)
+app.post('/api/sales/import-sheet', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Solo admins pueden importar' });
+
+    const globalConfig = readGlobalConfig();
+    const sheetId = String(req.body?.sheetId || globalConfig.salesSheetId || '').trim();
+    const sheetName = String(req.body?.sheetName || globalConfig.salesSheetName || '').trim();
+    if (!sheetId || !sheetName) {
+      return res.status(400).json({ error: 'sheetId y sheetName son requeridos (o configura global_config.json.salesSheetId/salesSheetName)' });
+    }
+
+    const googleSheetsApiKey = String(globalConfig.googleSheetsApiKey || '').trim();
+    const { leads } = await importSalesFromSheet(sheetId, sheetName, {
+      fetchGoogleSheet: (id, name) => fetchGoogleSheetValues(id, name, googleSheetsApiKey)
+    });
+
+    const cfg = readSalesConfig();
+    cfg.leads = leads;
+    cfg.leadsMeta = { sheetId, sheetName, importedAt: new Date().toISOString(), total: leads.length };
+    writeSalesConfig(cfg);
+
+    writeLog(req.user, 'SALES_IMPORT_SHEET', { sheetId, sheetName, total: leads.length });
+    res.json({ ok: true, total: leads.length, meta: cfg.leadsMeta });
+  } catch (e) {
+    console.error('sales/import-sheet error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+// Exponer leads actuales (para UI)
+app.get('/api/sales/leads', auth, (req, res) => {
+  try {
+    const cfg = readSalesConfig();
+    res.json({ leads: cfg.leads || [], meta: cfg.leadsMeta || null });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Sincronizar leads/ventas ↔ clientes (ClickUp dataset)
+app.post('/api/sales/sync-with-clientes', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
+
+    const salesCfg = readSalesConfig();
+    const leads = Array.isArray(salesCfg.leads) ? salesCfg.leads : [];
+    if (!leads.length) return res.status(400).json({ error: 'No hay leads cargados. Ejecuta /api/sales/import-sheet primero.' });
+
+    // Preferir dataset en memoria (cache) si existe; sino, traer de ClickUp
+    const tasks = cache.get('clickup_tasks') || await obtenerTareasClickUp();
+    const { updated, changes } = syncSalesWithClients({ clients: tasks, leads });
+
+    if (updated > 0) cache.set('clickup_tasks', tasks);
+
+    // También actualizar data/clientes.json si existe (dataset persistido por clickup/sync)
+    try {
+      if (fs.existsSync(CLIENTES_FILE)) {
+        const parsed = JSON.parse(fs.readFileSync(CLIENTES_FILE, 'utf8'));
+        const clientesFile = Array.isArray(parsed?.clientes) ? parsed.clientes : [];
+        const fileRes = syncSalesWithClients({ clients: clientesFile, leads });
+        if (fileRes.updated > 0) {
+          fs.writeFileSync(CLIENTES_FILE, JSON.stringify({ ...parsed, clientes: clientesFile, salesSyncedAt: new Date().toISOString() }, null, 2));
+        }
+      }
+    } catch (_e) {}
+
+    changes.slice(0, 500).forEach(ch => {
+      writeLog(req.user, 'SALES_SYNC_CLIENT', {
+        source: 'sales-sync',
+        clientId: ch.clientId,
+        clientName: ch.clientName,
+        changes: {
+          valorVenta: ch.oldValor !== ch.newValor ? { old: ch.oldValor, new: ch.newValor } : undefined,
+          vendedor: ch.oldVendedor !== ch.newVendedor ? { old: ch.oldVendedor, new: ch.newVendedor } : undefined
+        }
+      });
+    });
+
+    broadcastEvent('dataUpdated', { source: 'sales-sync', updated, timestamp: new Date().toISOString() });
+    res.json({ ok: true, updated });
+  } catch (e) {
+    console.error('sales/sync-with-clientes error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+// Obtener datos técnicos (IP/Dominio/Link) de un cliente específico
+app.get('/api/clientes/:id/hola', auth, (req, res) => {
+  try {
+    const tasks = cache.get('clickup_tasks') || [];
+    const client = tasks.find(c => String(c.id) === req.params.id);
+    if (!client) return res.status(404).json({ error: 'Cliente no encontrado' });
+
+    res.json({
+      ipPrimaria: client.ipPrimaria || client.ip || '',
+      ipSecundaria: client.ipSecundaria || '',
+      dominioPrincipal: client.dominioPrincipal || client.dominio || '',
+      dominio2: client.dominio2 || '',
+      linkHola: client.linkHola || ''
+    });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET Wiki content by language
+app.get('/api/wiki', auth, (req, res) => {
+  try {
+    const lang = ['es', 'en', 'pt'].includes(req.query.lang) ? req.query.lang : 'es';
+    const wikiFile = path.join(STATIC_ROOT, `wiki_${lang}.json`);
+    if (!fs.existsSync(wikiFile)) {
+      return res.status(404).json({ error: 'Wiki no encontrada para este idioma' });
+    }
+    const data = JSON.parse(fs.readFileSync(wikiFile, 'utf8'));
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// UPDATE Wiki page (only admins)
+app.put('/api/wiki/:lang/:page', auth, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'No tienes permisos para editar la wiki' });
+    }
+    const { lang, page } = req.params;
+    if (!['es', 'en', 'pt'].includes(lang)) return res.status(400).json({ error: 'Idioma inválido' });
+    
+    const wikiFile = path.join(STATIC_ROOT, `wiki_${lang}.json`);
+    if (!fs.existsSync(wikiFile)) return res.status(404).json({ error: 'Archivo wiki no encontrado' });
+    
+    const data = JSON.parse(fs.readFileSync(wikiFile, 'utf8'));
+    data[page] = req.body; // Upsert page content
+    
+    fs.writeFileSync(wikiFile, JSON.stringify(data, null, 2));
+    writeLog(req.user, 'WIKI_EDIT', { lang, page });
+    
+    res.status(200).json({ ok: true, lang, page });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+
+async function cargarDatosDominiosLocal() {
+  try {
+    const globalConfig = readGlobalConfig();
+    const sheetId = globalConfig.domainSheetId;
+    const sheetName = globalConfig.domainSheetName || 'Dominios';
+    const apiKey = globalConfig.googleSheetsApiKey;
+
+    if (!sheetId || !apiKey) return null;
+
+    console.log('Cargando respaldo de dominios...');
+    return await fetchGoogleSheetValues(sheetId, sheetName, apiKey);
+  } catch (e) {
+    console.warn('Error cargando respaldo de dominios:', e.message);
+    return null;
+  }
+}
+
 app.post('/api/sales/sync-vendedores', auth, (req, res) => {
   // Sincronizar CONSULTORES (responsables comerciales) vs IMPLEMENTADORES
   try {
@@ -1541,71 +1892,22 @@ app.post('/api/consultores/sync', auth, async (req, res) => {
 });
 
 // ================================================================
-// NOTE: KANBANS PERSONALIZADOS moved to line 1331 below);
-
-app.post('/api/kanbans', auth, (req, res) => {
-  const boards = readKanbans();
-  const title = String(req.body.title || req.body.name || 'Nuevo Proyecto').trim();
-  const newBoard = {
-    id: `kb-${Date.now()}`,
-    title,
-    ownerId: req.user.id,
-    participants: req.body.participants || [req.user.id],
-    columns: req.body.columns || [
-      { id: Date.now() + 1, title: 'To Do', cards: [] },
-      { id: Date.now() + 2, title: 'Doing', cards: [] },
-      { id: Date.now() + 3, title: 'Done', cards: [] }
-    ]
-  };
-  boards.push(newBoard);
-  writeKanbans(boards);
-  res.json({ ok: true, board: newBoard });
-});
-
-app.put('/api/kanbans/:id', auth, (req, res) => {
-  const boards = readKanbans();
-  const boardIndex = boards.findIndex(b => String(b.id) === String(req.params.id));
-  if (boardIndex === -1) return res.status(404).json({ error: 'Tablero no encontrado' });
-  
-  const updatedBoard = { ...boards[boardIndex], ...req.body };
-  // Ensure we keep the original ID and owner
-  updatedBoard.id = boards[boardIndex].id;
-  updatedBoard.ownerId = boards[boardIndex].ownerId;
-  
-  // Normalizar title si viene name
-  if (req.body.name && !req.body.title) updatedBoard.title = req.body.name;
-  
-  boards[boardIndex] = updatedBoard;
-  writeKanbans(boards);
-  res.json({ ok: true, board: boards[boardIndex] });
-});
-
-app.delete('/api/kanbans/:id', auth, (req, res) => {
-  let boards = readKanbans();
-  const boardId = req.params.id;
-  const board = boards.find(b => b.id === boardId);
-  if (!board) return res.status(404).json({ error: 'Tablero no encontrado' });
-  if (board.ownerId !== req.user.id && req.user.role !== 'admin') {
-     return res.status(403).json({ error: 'Prohibido: Solo el creador puede eliminarlo' });
-  }
-  boards = boards.filter(b => b.id !== boardId);
-  writeKanbans(boards);
-  res.json({ ok: true });
-});
+// KANBANS: Las rutas definitivas están definidas más abajo (línea ~2700).
+// Este bloque fue eliminado para evitar rutas duplicadas que rompían RBAC.
 
 // ================================================================
 // CLICKUP MEMBERS
 // ================================================================
 app.get('/api/clickup/members', auth, async (req, res) => {
   try {
-    requireEnvConfig(['CLICKUP_API_KEY', 'CLICKUP_LIST_ID']);
+    const clickupApiKey = getClickUpApiKey();
     const CACHE_KEY = 'clickup_members';
     const cached = cache.get(CACHE_KEY);
     if (cached) return res.json({ members: cached });
 
     let members = [];
     const teamRes = await fetch(`https://api.clickup.com/api/v2/team`, {
-      headers: { Authorization: CONFIG.CLICKUP_API_KEY }
+      headers: { Authorization: clickupApiKey }
     });
     const teamData = await teamRes.json();
     if (teamData && teamData.teams && teamData.teams.length > 0) {
@@ -1628,26 +1930,151 @@ app.get('/api/clickup/members', auth, async (req, res) => {
 });
 
 // ================================================================
-// RUTAS - DASHBOARD
+// CLICKUP SYNC → data/clientes.json + SSE(dataUpdated)
 // ================================================================
-// ================================================================
-// REAL-TIME SSE
-// ================================================================
-app.get('/api/events', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
+const DATA_DIR = path.join(STATIC_ROOT, 'data');
+const CLIENTES_FILE = path.join(DATA_DIR, 'clientes.json');
 
-  const clientId = Date.now();
-  const newClient = { id: clientId, res };
-  clients.push(newClient);
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
-  req.on('close', () => {
-    clients = clients.filter(c => c.id !== clientId);
-  });
+async function obtenerTareasClickUpRaw({ apiKey, listId }) {
+  const tasks = [];
+  let page = 0;
+  while (page < 20) {
+    const url = `https://api.clickup.com/api/v2/list/${listId}/task` +
+      `?page=${page}&include_closed=true&archived=false&subtasks=true`;
+    const resp = await fetch(url, {
+      headers: { Authorization: apiKey },
+      timeout: 30000
+    });
+    if (!resp.ok) throw new Error(`ClickUp API ${resp.status}: ${resp.statusText}`);
+    const data = await resp.json();
+    if (!data.tasks || data.tasks.length === 0) break;
+    tasks.push(...data.tasks);
+    if (data.tasks.length < 100) break;
+    page++;
+    await new Promise(r => setTimeout(r, 500));
+  }
+  return tasks;
+}
+
+function createLimitedFetcher(limit, fn) {
+  let active = 0;
+  const queue = [];
+  const runNext = () => {
+    if (active >= limit) return;
+    const item = queue.shift();
+    if (!item) return;
+    active++;
+    Promise.resolve()
+      .then(() => fn(...item.args))
+      .then(item.resolve, item.reject)
+      .finally(() => {
+        active--;
+        runNext();
+      });
+  };
+  return (...args) =>
+    new Promise((resolve, reject) => {
+      queue.push({ args, resolve, reject });
+      runNext();
+    });
+}
+
+app.post('/api/clickup/sync', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
+
+    const apiKey = getClickUpApiKey();
+    const listId = getClickUpListId();
+    const tz = req.body?.tz || 'America/Sao_Paulo';
+
+    // Obtener tareas pero SIN pedir detalles individuales para evitar Rate Limit
+    // El list endpoint ya trae los custom_fields necesarios
+    const tasksRaw = await obtenerTareasClickUpRaw({ apiKey, listId });
+    const fingerprint = computeTasksFingerprint(tasksRaw);
+
+    const domData = await cargarDatosDominiosLocal();
+
+    // Pasar fetchTaskDetails como null o una función vacía ya que NO lo usaremos ahora
+    // Los campos ya vienen en tasksRaw.custom_fields
+    const clients = await mapTasksToClients(tasksRaw, {
+      DIAS_ALERTA: 7,
+      DIAS_META: CONFIG.DIAS_META,
+      PAISES: CONFIG.PAISES,
+      FERIADOS: CONFIG.FERIADOS,
+      TAREAS_IGNORAR: CONFIG.TAREAS_IGNORAR,
+      ESTADOS_IGNORAR: CONFIG.ESTADOS_IGNORAR,
+      ESTADOS_IMPL
+    }, {
+      tz,
+      fetchTaskDetails: null, // Desactivado para evitar 429
+      domData
+    });
+
+    ensureDataDir();
+    fs.writeFileSync(CLIENTES_FILE, JSON.stringify({ fingerprint, updatedAt: new Date().toISOString(), clientes: clients }, null, 2));
+
+    broadcastEvent('dataUpdated', { fingerprint, total: clients.length, updatedAt: new Date().toISOString() });
+    writeLog(req.user, 'CLICKUP_SYNC', { source: 'clickup-sync', fingerprint, total: clients.length });
+
+    res.json({ ok: true, fingerprint, total: clients.length });
+  } catch (e) {
+    console.error('clickup/sync error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
 });
 
+// ================================================================
+// RUTA - PROXY DE TAREAS CLICKUP PARA EL FRONTEND (evita CORS)
+// El frontend llama GET /api/clickup/tasks cuando usa el servidor como proxy.
+// ================================================================
+app.get('/api/clickup/tasks', auth, async (req, res) => {
+  try {
+    const tasks = await obtenerTareasClickUp();
+    res.json({ tasks, meta: cacheMeta });
+  } catch (e) {
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// RUTA - GET /api/data (dataset general — frontend y scripts externos)
+// Prefiere clientes.json (sync completo) sobre el caché en memoria.
+// ================================================================
+app.get('/api/data', auth, async (req, res) => {
+  try {
+    // Intentar leer el dataset persistido por el sync completo
+    if (fs.existsSync(CLIENTES_FILE)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(CLIENTES_FILE, 'utf8'));
+        const clientes = Array.isArray(parsed?.clientes) ? parsed.clientes : [];
+        if (clientes.length > 0) {
+          return res.json({
+            clientes,
+            meta: {
+              source: 'file',
+              updatedAt: parsed.updatedAt || null,
+              total: clientes.length,
+              fingerprint: parsed.fingerprint || null
+            }
+          });
+        }
+      } catch (_e) { /* fallthrough to cache */ }
+    }
+    // Fallback: caché en memoria / ClickUp en tiempo real
+    const tasks = await obtenerTareasClickUp();
+    res.json({ clientes: tasks, meta: cacheMeta });
+  } catch (e) {
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// RUTAS - DASHBOARD
+// ================================================================
 app.get('/api/dashboard', auth, async (req, res) => {
   try {
     const tasks     = await obtenerTareasClickUp();
@@ -1694,6 +2121,62 @@ app.get('/api/clientes', auth, async (req, res) => {
 });
 
 // ================================================================
+// RUTA - BÚSQUEDA EXTERNA PARA EXTENSIONES (replica buscarClienteAPI de Apps Script)
+// GET /api/clientes/search-externo?nombre=X&apikey=Y
+// Autenticación por apikey en lugar de JWT (para extensiones/integraciones externas)
+// ================================================================
+app.get('/api/clientes/search-externo', async (req, res) => {
+  try {
+    const { nombre, apikey } = req.query;
+
+    // Verificar api key contra la de ClickUp (puede ajustarse a otra secret)
+    const validApiKey = String(readGlobalConfig().externalApiKey || process.env.EXTERNAL_API_KEY || '').trim();
+    if (!validApiKey || String(apikey || '').trim() !== validApiKey) {
+      return res.status(401).json({ error: 'API Key inválida', resultados: [], total: 0 });
+    }
+
+    if (!nombre || String(nombre).trim().length < 2) {
+      return res.status(400).json({ error: 'Parámetro nombre requerido (mínimo 2 caracteres)', resultados: [], total: 0 });
+    }
+
+    const busqueda = normalizeText(String(nombre).trim());
+    const tasks = await obtenerTareasClickUp();
+
+    const resultados = tasks
+      .filter(t => {
+        const n = normalizeText(t.nombre || '');
+        return n.includes(busqueda);
+      })
+      .map(t => ({
+        id         : t.id,
+        nombre     : t.nombre,
+        status     : t.status,
+        statusType : t.statusType,
+        pais       : t.pais,
+        plan       : t.plan,
+        ip         : t.ip || '',
+        dominio    : t.dominio || '',
+        linkHola   : t.linkHola || '',
+        rKickoff   : t.rKickoff || '',
+        rVenta     : t.rVenta || '',
+        fInicio    : t.fInicio || null,
+        fActivacion: t.fActivacion || null
+      }));
+
+    const clientesUnicos = [...new Set(resultados.map(r => normalizeText(r.nombre)))].length;
+
+    res.json({
+      resultados,
+      total         : resultados.length,
+      clientesUnicos,
+      timestamp     : new Date().toISOString()
+    });
+  } catch (e) {
+    res.status(e.statusCode || 500).json({ error: e.message, resultados: [], total: 0 });
+  }
+});
+
+// ================================================================
 // RUTA - CLIENTE INDIVIDUAL
 // ================================================================
 app.get('/api/clientes/:id', auth, async (req, res) => {
@@ -1703,6 +2186,137 @@ app.get('/api/clientes/:id', auth, async (req, res) => {
     if (!client) return res.status(404).json({ error:'Cliente no encontrado' });
     res.json(client);
   } catch(e) {
+    res.status(e.statusCode || 500).json({ error: e.message });
+  }
+});
+
+// ================================================================
+// RUTA - EDICIÓN MASIVA DE CLIENTES
+// ================================================================
+const BULK_UPDATE_FIELDS = new Set(['rKickoff','rVer','rCap','rGoLive','rAct','pais','plan','email','telefono']);
+const DEFAULT_CLICKUP_CUSTOM_FIELD_MAP = {
+  // Ejemplo: mapear "rKickoff" al ID real del custom field en ClickUp
+  // NOTA: estos IDs deben coincidir con los custom fields de tu lista en ClickUp.
+  rKickoff: 'cf_rKickoff_id_aqui',
+  rVer: 'cf_rVer_id_aqui',
+  rCap: 'cf_rCap_id_aqui',
+  rGoLive: 'cf_rGoLive_id_aqui',
+  rAct: 'cf_rAct_id_aqui',
+  pais: 'cf_pais_id_aqui',
+  plan: 'cf_plan_id_aqui',
+  email: 'cf_email_id_aqui',
+  telefono: 'cf_telefono_id_aqui'
+};
+
+function getClickUpCustomFieldMap() {
+  const globalConfig = readGlobalConfig();
+  const fromConfig = globalConfig?.clickupCustomFieldMap && typeof globalConfig.clickupCustomFieldMap === 'object'
+    ? globalConfig.clickupCustomFieldMap
+    : {};
+  return { ...DEFAULT_CLICKUP_CUSTOM_FIELD_MAP, ...fromConfig };
+}
+
+async function patchClickUpCustomField(taskId, customFieldId, value) {
+  const apiKey = getClickUpApiKey();
+  if (!apiKey) {
+    const err = new Error('API Key de ClickUp no disponible');
+    err.statusCode = 400;
+    throw err;
+  }
+  // ClickUp v2: POST /task/{task_id}/field/{field_id} — NOT PUT on the task root
+  const resp = await fetch(
+    `https://api.clickup.com/api/v2/task/${encodeURIComponent(taskId)}/field/${encodeURIComponent(customFieldId)}`,
+    {
+      method: 'POST',
+      headers: { Authorization: apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value }),
+      timeout: 30000
+    }
+  );
+  const json = await resp.json().catch(() => ({}));
+  if (!resp.ok) {
+    const err = new Error(json?.err || json?.error || `ClickUp HTTP ${resp.status}`);
+    err.statusCode = resp.status;
+    throw err;
+  }
+  return json;
+}
+
+app.post('/api/clientes/bulk-update', auth, async (req, res) => {
+  try {
+    if (!['admin', 'consultant'].includes(req.user?.role)) {
+      return res.status(403).json({ error: 'Prohibido: rol sin permisos para editar' });
+    }
+
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(x => String(x || '').trim()).filter(Boolean) : [];
+    const field = String(req.body?.field || '').trim();
+    const clear = Boolean(req.body?.clear);
+    const rawValue = req.body?.value;
+    const value = rawValue === null || rawValue === undefined ? '' : String(rawValue);
+
+    if (ids.length === 0) return res.status(400).json({ error: 'ids requerido (array no vacío)' });
+    if (ids.length > 200) return res.status(400).json({ error: 'Máximo 200 ids por operación' });
+    if (!BULK_UPDATE_FIELDS.has(field)) return res.status(400).json({ error: `field inválido: ${field}` });
+
+    const shouldClear = clear === true && value === '';
+    const newValueForDataset = shouldClear ? '' : value;
+    const newValueForClickUp = shouldClear ? null : value;
+
+    const clickupMap = getClickUpCustomFieldMap();
+    const customFieldId = clickupMap[field];
+    if (!customFieldId || String(customFieldId).includes('_id_aqui')) {
+      return res.status(400).json({
+        error: `No hay mapeo de ClickUp para el campo "${field}". Configura global_config.json > clickupCustomFieldMap.${field}`
+      });
+    }
+
+    const tasks = await obtenerTareasClickUp(); // puede venir de caché
+    const changes = [];
+    let updated = 0;
+
+    for (const taskId of ids) {
+      const client = tasks.find(t => String(t.id) === String(taskId));
+      if (client) {
+        // Enriquecer con nuevos campos si no existen (legacy)
+        client.ipPrimaria = client.ipPrimaria || client.ip || '';
+        client.ipSecundaria = client.ipSecundaria || '';
+        client.dominioPrincipal = client.dominioPrincipal || client.dominio || '';
+        client.dominio2 = client.dominio2 || '';
+        client.linkHola = client.linkHola || '';
+      }
+      if (!client) continue;
+
+      const oldValue = client[field] ?? '';
+      if (String(oldValue) === String(newValueForDataset)) continue;
+
+      client[field] = newValueForDataset;
+      updated++;
+
+      // Sincronizar con ClickUp
+      await patchClickUpCustomField(taskId, customFieldId, newValueForClickUp);
+      await new Promise(r => setTimeout(r, 200));
+
+      changes.push({ id: taskId, oldValue, newValue: newValueForDataset });
+    }
+
+    // Mantener "dataset" en memoria: refrescar el caché con las tareas ya mutadas
+    cache.set('clickup_tasks', tasks);
+    cacheMeta.source = 'cache';
+
+    writeLog(req.user, 'BULK_EDIT', {
+      source: 'bulk-edit',
+      timestamp: new Date().toISOString(),
+      ids,
+      field,
+      value: newValueForDataset,
+      clear: shouldClear,
+      updated,
+      changes
+    });
+
+    res.json({ ok: true, updated, field, value: newValueForDataset, cleared: shouldClear });
+  } catch (e) {
+    console.error('bulk-update error:', e);
     res.status(e.statusCode || 500).json({ error: e.message });
   }
 });
@@ -1934,6 +2548,20 @@ app.get('/', (_req, res) => {
   sendPublicFile(res, 'vylex.html');
 });
 
+app.get('/js/:filename', (req, res, next) => {
+  const requested = String(req.params.filename || '').trim();
+  if (!requested) return next();
+  res.setHeader('Cache-Control', 'no-store');
+  return res.sendFile(path.join(STATIC_ROOT, 'js', requested));
+});
+
+app.get('/css/:filename', (req, res, next) => {
+  const requested = String(req.params.filename || '').trim();
+  if (!requested) return next();
+  res.setHeader('Cache-Control', 'no-store');
+  return res.sendFile(path.join(STATIC_ROOT, 'css', requested));
+});
+
 app.get('/:filename', (req, res, next) => {
   if (req.params.filename.startsWith('api')) return next();
   if (!PUBLIC_FILES.has(req.params.filename)) return next();
@@ -1947,9 +2575,9 @@ const KANBANS_FILE = path.join(STATIC_ROOT, 'kanbans.json');
 
 function readKanbans() {
   try {
-    return fs.existsSync(KANBANS_FILE) ? JSON.parse(fs.readFileSync(KANBANS_FILE, 'utf8')) : { kanbans: [], userKanbans: [], comments: [] };
+    return fs.existsSync(KANBANS_FILE) ? JSON.parse(fs.readFileSync(KANBANS_FILE, 'utf8')) : [];
   } catch(e) {
-    return { kanbans: [], userKanbans: [], comments: [] };
+    return [];
   }
 }
 
@@ -1957,72 +2585,305 @@ function writeKanbans(data) {
   fs.writeFileSync(KANBANS_FILE, JSON.stringify(data, null, 2));
 }
 
-// Obtener kanbans del usuario
+// GET all visible boards for current user
+// ================================================================
+// SOLICITUDES INTERNAS (BAJA, UPGRADE, CROSS-SELL)
+// ================================================================
+app.get('/api/requests', auth, (req, res) => {
+  try {
+    const { tipo, estado } = req.query;
+    let requests = readRequests();
+    
+    // Filtros
+    if (tipo) requests = requests.filter(r => r.tipo === tipo);
+    if (estado) requests = requests.filter(r => r.estado === estado);
+    
+    // Solo Admin y CS pueden ver todas. Consultores solo las suyas (opcional, pero user pidió "para CS / admin")
+    if (req.user.role !== 'admin' && req.user.role !== 'cs') {
+       requests = requests.filter(r => r.usuarioId === req.user.id);
+    }
+    
+    res.json(requests);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/requests', auth, async (req, res) => {
+  try {
+    const { tipo, clienteId, clienteNombre, motivo, valorEstimado, comentarios } = req.body;
+    if (!tipo || !clienteNombre) return res.status(400).json({ error: 'Faltan campos requeridos' });
+
+    const requests = readRequests();
+    const newRequest = {
+      id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      tipo,
+      clienteId,
+      clienteNombre,
+      usuarioId: req.user.id,
+      usuarioNombre: req.user.username,
+      fecha: new Date().toISOString(),
+      estado: 'pending',
+      motivo,
+      valorEstimado: parseFloat(valorEstimado) || 0,
+      comentarios: comentarios ? [comentarios] : []
+    };
+
+    requests.unshift(newRequest);
+    writeRequests(requests);
+
+    // Opcional: ClickUp Integration
+    const gConfig = readGlobalConfig();
+    let targetListId = null;
+    if (tipo === 'baja') targetListId = gConfig.clickupListIdBajas;
+    if (tipo === 'upgrade') targetListId = gConfig.clickupListIdUpgrades;
+
+    if (targetListId) {
+      try {
+        const desc = `Solicitud de ${tipo} creada por ${req.user.username}.\nMotivo: ${motivo}\nValor: ${valorEstimado}`;
+        await createClickUpTask(targetListId, `SOLICITUD: ${tipo.toUpperCase()} - ${clienteNombre}`, desc, [tipo]);
+      } catch (ce) {
+        console.error('Error creating ClickUp task for request:', ce.message);
+        // No bloqueamos la respuesta del dashboard por error en ClickUp
+      }
+    }
+
+    res.status(201).json(newRequest);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ================================================================
+// REPARTO AUTOMÁTICO DE CLIENTES
+// ================================================================
+function sugerirDistribucionNuevosClientes({ nuevosClientes, cargaActual, consultantMetas }) {
+  const suggestions = [];
+  const currentLoad = { ...cargaActual };
+  const consultores = Object.keys(consultantMetas);
+
+  for (const cliente of nuevosClientes) {
+    const sorted = consultores
+      .map(name => ({
+        name,
+        load: currentLoad[name] || 0,
+        meta: consultantMetas[name] || 10,
+        ratio: (currentLoad[name] || 0) / (consultantMetas[name] || 10)
+      }))
+      .filter(c => c.load < c.meta)
+      .sort((a, b) => a.ratio - b.ratio || a.load - b.load);
+
+    if (sorted.length > 0) {
+      const best = sorted[0];
+      suggestions.push({
+        clienteId: cliente.id,
+        clienteNombre: cliente.nombre,
+        consultorSugerido: best.name,
+        cargaActual: best.load,
+        meta: best.meta
+      });
+      currentLoad[best.name] = (currentLoad[best.name] || 0) + 1;
+    } else {
+      suggestions.push({
+        clienteId: cliente.id,
+        clienteNombre: cliente.nombre,
+        consultorSugerido: "SIN CUPO",
+        cargaActual: 0,
+        meta: 0
+      });
+    }
+  }
+  return suggestions;
+}
+
+app.post('/api/consultores/distribuir-nuevos', auth, async (req, res) => {
+  try {
+    const { aplicar = false } = req.body;
+    const gConfig = readGlobalConfig();
+    const consultantMetas = gConfig.consultantMetas || {};
+    
+    // Obtener todos los clientes actuales
+    const allTasks = await obtenerTareasClickUp();
+    
+    // 1. Identificar Nuevos Clientes (mes actual, statusType = impl)
+    const currentMonth = MESES[new Date().getMonth()] + ' ' + new Date().getFullYear();
+    const nuevosClientes = allTasks.filter(t => t.mesInicio === currentMonth && t.statusType === 'impl' && !t.rKickoff);
+    
+    // 2. Calcular Carga Actual (statusType = impl)
+    const cargaActual = {};
+    allTasks.forEach(t => {
+      if (t.statusType === 'impl' && t.rKickoff) {
+        cargaActual[t.rKickoff] = (cargaActual[t.rKickoff] || 0) + 1;
+      }
+    });
+
+    // 3. Generar Sugerencia
+    const propuesta = sugerirDistribucionNuevosClientes({ 
+      nuevosClientes, 
+      cargaActual, 
+      consultantMetas 
+    });
+
+    // 4. Aplicar si se solicita
+    if (aplicar) {
+      const fieldMap = gConfig.clickupCustomFieldMap || {};
+      const fieldId = fieldMap.rKickoff;
+      if (!fieldId) return res.status(400).json({ error: 'ID del campo Responsable Kickoff no configurado' });
+
+      let actualizados = 0;
+      for (const s of propuesta) {
+        if (s.consultorSugerido !== "SIN CUPO") {
+          try {
+            await patchClickUpCustomField(s.clienteId, fieldId, s.consultorSugerido);
+            writeLog(req.user, 'ASSIGN_CLIENT', { clienteId: s.clienteId, clienteNombre: s.clienteNombre, consultor: s.consultorSugerido });
+            actualizados++;
+          } catch (err) {
+            console.error(`Error asignando ${s.clienteId}:`, err.message);
+          }
+        }
+      }
+      return res.json({ message: `Reparto completado. Clientes asignados: ${actualizados}`, propuesta });
+    }
+
+    res.json(propuesta);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch('/api/requests/:id', auth, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado, comentario } = req.body;
+    const requests = readRequests();
+    const idx = requests.findIndex(r => r.id === id);
+    
+    if (idx === -1) return res.status(404).json({ error: 'Solicitud no encontrada' });
+    
+    if (estado) {
+      if (req.user.role !== 'admin' && req.user.role !== 'cs') {
+        return res.status(403).json({ error: 'Solo Admin o CS pueden cambiar el estado' });
+      }
+      requests[idx].estado = estado;
+    }
+    
+    if (comentario) {
+      if (!requests[idx].comentarios) requests[idx].comentarios = [];
+      requests[idx].comentarios.push({
+        usuario: req.user.username,
+        fecha: new Date().toISOString(),
+        texto: comentario
+      });
+    }
+    
+    writeRequests(requests);
+    res.json(requests[idx]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.get('/api/kanbans', auth, (req, res) => {
-  const data = readKanbans();
-  const userKanbans = data.kanbans.filter(kb => 
-    kb.ownerId === req.user.id || kb.sharedWith?.includes(req.user.id)
-  );
-  res.json({ kanbans: userKanbans });
+
+  try {
+    const role = req.user.role || 'viewer';
+    const allKanbans = readKanbans();
+    const visibleKanbans = allKanbans.filter(kb => 
+      kb.permissions?.view?.includes(role) || kb.ownerId === req.user.id
+    );
+    res.json(visibleKanbans);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// Crear nuevo kanban personalizado
+// CREATE new board (Admin only)
 app.post('/api/kanbans', auth, (req, res) => {
-  const { name, type, config, permissions } = req.body;
-  if (!name) return res.status(400).json({ error: 'Nombre requerido' });
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'No tienes permisos para crear tableros' });
+    }
+    const { name, linkedToClickup, columns, permissions } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nombre requerido' });
 
-  const data = readKanbans();
-  const newKanban = {
-    id: 'kb_' + Date.now(),
-    name,
-    type: type || 'custom',
-    ownerId: req.user.id,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    config: config || {},
-    sharedWith: [],
-    permissions: permissions || 'private'
-  };
+    const allKanbans = readKanbans();
+    const newBoard = {
+      id: 'kb_' + Date.now(),
+      name,
+      ownerId: req.user.id,
+      linkedToClickup: !!linkedToClickup,
+      columns: columns || [],
+      cards: linkedToClickup ? undefined : [],
+      permissions: permissions || { view: ["admin"], edit: ["admin"] }
+    };
 
-  data.kanbans.push(newKanban);
-  writeKanbans(data);
-  res.json({ kanban: newKanban });
+    allKanbans.push(newBoard);
+    writeKanbans(allKanbans);
+    res.json(newBoard);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// Actualizar kanban
+// UPDATE board (Admin or Owner)
 app.put('/api/kanbans/:id', auth, (req, res) => {
-  const data = readKanbans();
-  const kanban = data.kanbans.find(kb => kb.id === req.params.id);
-  
-  if (!kanban) return res.status(404).json({ error: 'Kanban no encontrado' });
-  if (kanban.ownerId !== req.user.id) return res.status(403).json({ error: 'Prohibido' });
+  try {
+    const allKanbans = readKanbans();
+    const idx = allKanbans.findIndex(kb => kb.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Tablero no encontrado' });
 
-  Object.assign(kanban, { ...req.body, updatedAt: new Date().toISOString() });
-  writeKanbans(data);
-  res.json({ kanban });
+    const board = allKanbans[idx];
+    if (req.user.role !== 'admin' && board.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'No tienes permisos' });
+    }
+
+    // Update fields
+    const updated = { ...board, ...req.body, id: board.id, ownerId: board.ownerId };
+    allKanbans[idx] = updated;
+
+    writeKanbans(allKanbans);
+    res.json(updated);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// Compartir kanban con usuario
-app.post('/api/kanbans/:id/share', auth, (req, res) => {
-  const { userId } = req.body;
-  const data = readKanbans();
-  const kanban = data.kanbans.find(kb => kb.id === req.params.id);
-  
-  if (!kanban) return res.status(404).json({ error: 'Kanban no encontrado' });
-  if (kanban.ownerId !== req.user.id) return res.status(403).json({ error: 'Prohibido' });
-  if (!kanban.sharedWith) kanban.sharedWith = [];
-  if (!kanban.sharedWith.includes(userId)) kanban.sharedWith.push(userId);
-  
-  writeKanbans(data);
-  res.json({ kanban });
+// DELETE board (Owner/Admin & not linked to ClickUp)
+app.delete('/api/kanbans/:id', auth, (req, res) => {
+  try {
+    const allKanbans = readKanbans();
+    const idx = allKanbans.findIndex(kb => kb.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: 'Tablero no encontrado' });
+
+    const board = allKanbans[idx];
+    if (board.linkedToClickup === true) {
+      return res.status(400).json({ error: 'No se puede borrar el tablero estándar sincronizado' });
+    }
+
+    if (req.user.role !== 'admin' && board.ownerId !== req.user.id) {
+      return res.status(403).json({ error: 'No tienes permisos' });
+    }
+
+    const filtered = allKanbans.filter(kb => kb.id !== req.params.id);
+    writeKanbans(filtered);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-// Agregar comentario a tarjeta
+// Agregar comentario a tarjeta (usa archivo separado para no corromper el array de kanbans)
+const KANBAN_COMMENTS_FILE = path.join(STATIC_ROOT, 'kanban_comments.json');
+
+function readKanbanComments() {
+  try {
+    if (!fs.existsSync(KANBAN_COMMENTS_FILE)) return [];
+    const parsed = JSON.parse(fs.readFileSync(KANBAN_COMMENTS_FILE, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_e) { return []; }
+}
+
+function writeKanbanComments(comments) {
+  fs.writeFileSync(KANBAN_COMMENTS_FILE, JSON.stringify(comments, null, 2));
+}
+
 app.post('/api/kanbans/:id/comments', auth, (req, res) => {
   const { cardId, text } = req.body;
   if (!cardId || !text) return res.status(400).json({ error: 'Campos requeridos' });
 
-  const data = readKanbans();
+  const comments = readKanbanComments();
   const comment = {
     id: 'cmt_' + Date.now(),
     kanbanId: req.params.id,
@@ -2032,17 +2893,14 @@ app.post('/api/kanbans/:id/comments', auth, (req, res) => {
     text,
     createdAt: new Date().toISOString()
   };
-
-  if (!data.comments) data.comments = [];
-  data.comments.push(comment);
-  writeKanbans(data);
+  comments.push(comment);
+  writeKanbanComments(comments);
   res.json({ comment });
 });
 
-// Obtener comentarios
+// Obtener comentarios de un tablero
 app.get('/api/kanbans/:id/comments', auth, (req, res) => {
-  const data = readKanbans();
-  const comments = (data.comments || []).filter(c => c.kanbanId === req.params.id);
+  const comments = readKanbanComments().filter(c => c.kanbanId === req.params.id);
   res.json({ comments });
 });
 
@@ -2081,49 +2939,22 @@ app.post('/api/sync/sales-point', auth, async (req, res) => {
       return res.status(400).json({ error: 'taskId y vendor requeridos' });
     }
 
-    // Registrar en auditoría
-    writeLog(req.user, 'SALES_POINT_SYNC', {
-      taskId,
-      vendor,
-      clientName,
-      action: 'Asignación de vendedor'
-    });
+    writeLog(req.user, 'SALES_POINT_SYNC', { taskId, vendor, clientName, action: 'Asignación de vendedor' });
 
-    // Sincronizar a ClickUp: Actualizar campo custom de vendor
-    const updateRes = await fetch(
-      `https://api.clickup.com/api/v2/task/${taskId}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: CONFIG.CLICKUP_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          custom_fields: [
-            {
-              id: CONFIG.VENDOR_FIELD_ID || 'vendor_field',
-              value: vendor
-            }
-          ]
-        })
-      }
-    );
-
-    if (!updateRes.ok) {
-      throw new Error(`ClickUp update failed: ${updateRes.statusText}`);
+    // Usar getClickUpCustomFieldMap() en lugar de CONFIG.VENDOR_FIELD_ID (que no existe)
+    const fieldMap = getClickUpCustomFieldMap();
+    const fieldId = fieldMap.rVenta || fieldMap.vendedor;
+    if (fieldId && !String(fieldId).includes('_id_aqui')) {
+      await patchClickUpCustomField(taskId, fieldId, vendor);
+    } else {
+      console.warn('sales-point sync: field ID para vendedor no configurado en clickupCustomFieldMap');
     }
 
-    // Broadcast event
-    broadcastEvent('sync-completed', {
-      point: 'sales',
-      taskId,
-      vendor
-    });
-
-    res.json({ ok: true, synced: true });
+    broadcastEvent('sync-completed', { point: 'sales', taskId, vendor });
+    res.json({ ok: true, synced: Boolean(fieldId) });
   } catch (e) {
     console.error('Sales point sync error:', e);
-    res.status(500).json({ error: e.message });
+    res.status(e.statusCode || 500).json({ error: e.message });
   }
 });
 
@@ -2135,49 +2966,21 @@ app.post('/api/sync/impl-point', auth, async (req, res) => {
       return res.status(400).json({ error: 'taskId e implementador requeridos' });
     }
 
-    writeLog(req.user, 'IMPL_POINT_SYNC', {
-      taskId,
-      implementador,
-      startDate,
-      action: 'Inicio de implementación'
-    });
+    writeLog(req.user, 'IMPL_POINT_SYNC', { taskId, implementador, startDate, action: 'Inicio de implementación' });
 
-    // Actualizar status y responsable en ClickUp
-    const updateRes = await fetch(
-      `https://api.clickup.com/api/v2/task/${taskId}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: CONFIG.CLICKUP_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: 'EN IMPLEMENTACION',
-          custom_fields: [
-            {
-              id: CONFIG.IMPL_RESPONSABLE_FIELD_ID || 'impl_field',
-              value: implementador
-            }
-          ],
-          start_date: startDate ? new Date(startDate).getTime() : undefined
-        })
-      }
-    );
-
-    if (!updateRes.ok) {
-      throw new Error(`ClickUp implementation update failed`);
+    const fieldMap = getClickUpCustomFieldMap();
+    const fieldId = fieldMap.rKickoff;
+    if (fieldId && !String(fieldId).includes('_id_aqui')) {
+      await patchClickUpCustomField(taskId, fieldId, implementador);
+    } else {
+      console.warn('impl-point sync: field ID para rKickoff no configurado en clickupCustomFieldMap');
     }
 
-    broadcastEvent('sync-completed', {
-      point: 'implementation',
-      taskId,
-      implementador
-    });
-
-    res.json({ ok: true, synced: true });
+    broadcastEvent('sync-completed', { point: 'implementation', taskId, implementador });
+    res.json({ ok: true, synced: Boolean(fieldId) });
   } catch (e) {
     console.error('Implementation point sync error:', e);
-    res.status(500).json({ error: e.message });
+    res.status(e.statusCode || 500).json({ error: e.message });
   }
 });
 
@@ -2189,47 +2992,21 @@ app.post('/api/sync/cancel-point', auth, async (req, res) => {
       return res.status(400).json({ error: 'taskId y reason requeridos' });
     }
 
-    writeLog(req.user, 'CANCEL_POINT_SYNC', {
-      taskId,
-      reason,
-      cancelledBy,
-      action: 'Cancelación de cliente'
-    });
+    writeLog(req.user, 'CANCEL_POINT_SYNC', { taskId, reason, cancelledBy, action: 'Cancelación de cliente' });
 
-    // Actualizar status a CANCELADO en ClickUp
-    const updateRes = await fetch(
-      `https://api.clickup.com/api/v2/task/${taskId}`,
-      {
-        method: 'PUT',
-        headers: {
-          Authorization: CONFIG.CLICKUP_API_KEY,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: 'CANCELADO',
-          custom_fields: [
-            {
-              id: CONFIG.CANCEL_REASON_FIELD_ID || 'cancel_field',
-              value: reason
-            }
-          ]
-        })
-      }
-    );
-
-    if (!updateRes.ok) {
-      throw new Error(`ClickUp cancellation update failed`);
+    const fieldMap = getClickUpCustomFieldMap();
+    const fieldId = fieldMap.motivoBaja || fieldMap.cancelReason;
+    if (fieldId && !String(fieldId).includes('_id_aqui')) {
+      await patchClickUpCustomField(taskId, fieldId, reason);
+    } else {
+      console.warn('cancel-point sync: field ID para motivo de baja no configurado en clickupCustomFieldMap');
     }
 
-    broadcastEvent('sync-completed', {
-      point: 'cancellation',
-      taskId
-    });
-
-    res.json({ ok: true, synced: true });
+    broadcastEvent('sync-completed', { point: 'cancellation', taskId });
+    res.json({ ok: true, synced: Boolean(fieldId) });
   } catch (e) {
-    console.error('Cancellation point sync error:', e);
-    res.status(500).json({ error: e.message });
+    console.error('Cancellation point error:', e);
+    res.status(e.statusCode || 500).json({ error: e.message });
   }
 });
 
@@ -2531,11 +3308,10 @@ app.get('*', (_req, res) => {
 // ================================================================
 // INICIO
 // ================================================================
+ensureDataDir();
 app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🔑 JWT_SECRET: ${CONFIG.JWT_SECRET ? 'Cargado CORRECTAMENTE' : 'ERROR: NO CARGADO'}`);
   console.log(`🔑 ClickUp List: ${CONFIG.CLICKUP_LIST_ID || 'no configurada'}`);
   console.log(`💾 Cache TTL: ${process.env.CACHE_TTL || 3600}s`);
-  if (!CONFIG.CLICKUP_API_KEY || !CONFIG.CLICKUP_LIST_ID || !CONFIG.JWT_SECRET) {
-    console.warn('⚠️ Faltan variables requeridas. Revisa CLICKUP_API_KEY, CLICKUP_LIST_ID y JWT_SECRET.');
-  }
 });

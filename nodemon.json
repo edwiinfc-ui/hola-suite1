@@ -1,0 +1,18 @@
+{
+  "watch": ["server.js", "api", "functions", "src", "js"],
+  "ext": "js,mjs,cjs",
+  "ignore": [
+    "dashboards.json",
+    "dashboards.json.tmp",
+    "global_config.json",
+    "sales_config.json",
+    "kanbans.json",
+    "audit_logs.json",
+    "users.json",
+    "form_submissions.json",
+    "server.log",
+    "server_current.log",
+    "server_run.log"
+  ]
+}
+

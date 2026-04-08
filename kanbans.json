@@ -1,19 +1,36 @@
-{
-  "kanbans": [
-    {
-      "id": "kb_default",
-      "name": "ClickUp Sincronizado",
-      "type": "clickup",
-      "ownerId": null,
-      "createdAt": "2026-03-30T00:00:00Z",
-      "updatedAt": "2026-03-30T00:00:00Z",
-      "config": {
-        "listId": "9002104190"
-      },
-      "sharedWith": [],
-      "permissions": "public"
+[
+  {
+    "id": "default",
+    "name": "Estándar (ClickUp)",
+    "ownerId": "admin",
+    "linkedToClickup": true,
+    "columns": [
+      { "id": "kickoff", "title": "Kickoff", "filter": { "statusContains": "kickoff" }, "requiredFields": ["rKickoff"] },
+      { "id": "analisis", "title": "Análisis", "filter": { "statusContains": "analisis" }, "requiredFields": ["rVer"] },
+      { "id": "instalacion", "title": "Instalación", "filter": { "statusContains": "instalacion" }, "requiredFields": [] },
+      { "id": "capacitacion", "title": "Capacitación", "filter": { "statusContains": "capacitacion" }, "requiredFields": ["rCap"] },
+      { "id": "golive", "title": "Go-Live", "filter": { "statusContains": "go-live" }, "requiredFields": ["rGoLive"] },
+      { "id": "activacion", "title": "Activación", "filter": { "statusContains": "activacion" }, "requiredFields": ["rAct"] }
+    ],
+    "permissions": {
+      "view": ["admin", "consultant", "cs", "viewer"],
+      "edit": ["admin", "consultant"]
     }
-  ],
-  "userKanbans": [],
-  "comments": []
-}
+  },
+  {
+    "id": "intern-tasks",
+    "name": "Tareas Internas",
+    "ownerId": "admin",
+    "linkedToClickup": false,
+    "columns": [
+      { "id": "todo", "title": "Por Hacer", "filter": {}, "requiredFields": [] },
+      { "id": "doing", "title": "En Proceso", "filter": {}, "requiredFields": [] },
+      { "id": "done", "title": "Completado", "filter": {}, "requiredFields": [] }
+    ],
+    "cards": [],
+    "permissions": {
+      "view": ["admin", "consultant", "cs"],
+      "edit": ["admin", "consultant"]
+    }
+  }
+]

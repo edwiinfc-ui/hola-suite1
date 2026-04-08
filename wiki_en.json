@@ -1,0 +1,55 @@
+{
+  "overview": {
+    "title": "System Overview",
+    "subtitle": "Complete Control Center Guide",
+    "sections": [
+      {
+        "heading": "¡Hola! Suite Control Center",
+        "body": "Centralized platform for managing the full implementation and support lifecycle.",
+        "bullets": [
+          "Dashboard: Real-time metrics",
+          "Implementations: Customer tracking",
+          "Assets: Live production customers",
+          "BI Dashboard: Business Intelligence"
+        ]
+      },
+      {
+        "heading": "Tip of the Day",
+        "body": "Use the date filters in the top bar to analyze any period. They apply to all modules.",
+        "bullets": []
+      }
+    ]
+  },
+  "kickoff": {
+    "title": "Stage: Kickoff",
+    "subtitle": "Stage 1 of 6 — Goal: 3 days",
+    "sections": [
+      {
+        "heading": "What is Kickoff?",
+        "body": "The first formal meeting with the customer to set expectations and the workflow.",
+        "bullets": [
+          "Team introduction",
+          "Review of the plan",
+          "Define dates and commitments",
+          "Request technical access"
+        ]
+      }
+    ]
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "subtitle": "Common team queries",
+    "sections": [
+      {
+        "heading": "Is the data real-time?",
+        "body": "It syncs when you click 'Sync' or log in.",
+        "bullets": []
+      },
+      {
+        "heading": "How do I add users?",
+        "body": "Go to Users → New User. Only admins can create users.",
+        "bullets": []
+      }
+    ]
+  }
+}

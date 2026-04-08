@@ -1,0 +1,55 @@
+{
+  "overview": {
+    "title": "Visión General del Sistema",
+    "subtitle": "Guía completa del Control Center",
+    "sections": [
+      {
+        "heading": "¡Hola! Suite Control Center",
+        "body": "Plataforma centralizada para gestionar el ciclo completo de implementación y soporte de clientes.",
+        "bullets": [
+          "Dashboard: Métricas en tiempo real",
+          "Implementaciones: Seguimiento de clientes",
+          "Activos: Clientes en producción",
+          "BI Dashboard: Business Intelligence"
+        ]
+      },
+      {
+        "heading": "Tip del día",
+        "body": "Usa los filtros de fecha en la barra superior para analizar cualquier período. Aplican a todos los módulos.",
+        "bullets": []
+      }
+    ]
+  },
+  "kickoff": {
+    "title": "Etapa: Kickoff",
+    "subtitle": "Etapa 1 de 6 — Meta: 3 días",
+    "sections": [
+      {
+        "heading": "¿Qué es el Kickoff?",
+        "body": "Primera reunión formal con el cliente donde se presentan las expectativas y el plan de trabajo.",
+        "bullets": [
+          "Presentación del equipo",
+          "Revisión del plan contratado",
+          "Establecer fechas y compromisos",
+          "Solicitar accesos técnicos"
+        ]
+      }
+    ]
+  },
+  "faq": {
+    "title": "Preguntas Frecuentes",
+    "subtitle": "Dudas comunes del equipo",
+    "sections": [
+      {
+        "heading": "¿Los datos son en tiempo real?",
+        "body": "Se sincronizan al hacer clic en 'Sincronizar' o al iniciar sesión.",
+        "bullets": []
+      },
+      {
+        "heading": "¿Cómo agrego usuarios?",
+        "body": "Ve a Usuarios → Nuevo Usuario. Solo admins pueden crear usuarios.",
+        "bullets": []
+      }
+    ]
+  }
+}

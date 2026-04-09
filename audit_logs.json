@@ -1,5 +1,195 @@
 [
   {
+    "id": 1775738474963,
+    "timestamp": "2026-04-09T12:41:14.963Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/sales/sync-vendedores",
+    "details": {}
+  },
+  {
+    "id": 1775738474941,
+    "timestamp": "2026-04-09T12:41:14.941Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "SYNC_ROLES",
+    "details": {
+      "consultores": 0,
+      "implementadores": 0,
+      "matches": 0
+    }
+  },
+  {
+    "id": 1775738470277,
+    "timestamp": "2026-04-09T12:41:10.277Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/consultores/sync",
+    "details": {}
+  },
+  {
+    "id": 1775735737817,
+    "timestamp": "2026-04-09T11:55:37.817Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/sales/sync-vendedores",
+    "details": {}
+  },
+  {
+    "id": 1775735737778,
+    "timestamp": "2026-04-09T11:55:37.778Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "SYNC_ROLES",
+    "details": {
+      "consultores": 0,
+      "implementadores": 0,
+      "matches": 0
+    }
+  },
+  {
+    "id": 1775735732975,
+    "timestamp": "2026-04-09T11:55:32.975Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/consultores/sync",
+    "details": {}
+  },
+  {
+    "id": 1775683894556,
+    "timestamp": "2026-04-08T21:31:34.556Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/sales/sync-vendedores",
+    "details": {}
+  },
+  {
+    "id": 1775683894528,
+    "timestamp": "2026-04-08T21:31:34.528Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "SYNC_ROLES",
+    "details": {
+      "consultores": 0,
+      "implementadores": 0,
+      "matches": 0
+    }
+  },
+  {
+    "id": 1775683891217,
+    "timestamp": "2026-04-08T21:31:31.217Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/consultores/sync",
+    "details": {}
+  },
+  {
+    "id": 1775682698077,
+    "timestamp": "2026-04-08T21:11:38.077Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/opa/conversations",
+    "details": {
+      "workspace": ""
+    }
+  },
+  {
+    "id": 1775682697371,
+    "timestamp": "2026-04-08T21:11:37.371Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/opa/conversations",
+    "details": {
+      "workspace": ""
+    }
+  },
+  {
+    "id": 1775682630393,
+    "timestamp": "2026-04-08T21:10:30.393Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/opa/conversations",
+    "details": {
+      "workspace": ""
+    }
+  },
+  {
+    "id": 1775682623034,
+    "timestamp": "2026-04-08T21:10:23.034Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/sales/sync-vendedores",
+    "details": {}
+  },
+  {
+    "id": 1775682623000,
+    "timestamp": "2026-04-08T21:10:23.000Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "SYNC_ROLES",
+    "details": {
+      "consultores": 0,
+      "implementadores": 0,
+      "matches": 0
+    }
+  },
+  {
+    "id": 1775682619711,
+    "timestamp": "2026-04-08T21:10:19.711Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/consultores/sync",
+    "details": {}
+  },
+  {
+    "id": 1775678665830,
+    "timestamp": "2026-04-08T20:04:25.830Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/opa/conversations",
+    "details": {
+      "workspace": ""
+    }
+  },
+  {
+    "id": 1775678632026,
+    "timestamp": "2026-04-08T20:03:52.026Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/opa/conversations",
+    "details": {
+      "workspace": ""
+    }
+  },
+  {
+    "id": 1775678621976,
+    "timestamp": "2026-04-08T20:03:41.976Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/sales/sync-vendedores",
+    "details": {}
+  },
+  {
+    "id": 1775678621896,
+    "timestamp": "2026-04-08T20:03:41.896Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "SYNC_ROLES",
+    "details": {
+      "consultores": 0,
+      "implementadores": 0,
+      "matches": 0
+    }
+  },
+  {
+    "id": 1775678611909,
+    "timestamp": "2026-04-08T20:03:31.909Z",
+    "user": "edwin@holasuite.com",
+    "userId": 1774642292987,
+    "action": "POST /api/consultores/sync",
+    "details": {}
+  },
+  {
     "id": 1775676053845,
     "timestamp": "2026-04-08T19:20:53.845Z",
     "user": "edwin@holasuite.com",

@@ -1929,6 +1929,43 @@ app.get('/api/clickup/members', auth, async (req, res) => {
   }
 });
 
+// Nuevo endpoint: Obtener estados disponibles en ClickUp
+// ================================================================
+app.get('/api/clickup/list-info', auth, async (req, res) => {
+  try {
+    const apiKey = getClickUpApiKey();
+    const listId = getClickUpListId();
+    
+    const resp = await fetch(`https://api.clickup.com/api/v2/list/${listId}`, {
+      headers: { Authorization: apiKey }
+    });
+    
+    if (!resp.ok) {
+      throw new Error(`ClickUp HTTP ${resp.status}`);
+    }
+    
+    const data = await resp.json();
+    const statuses = data.statuses || [];
+    
+    res.json({ 
+      list: {
+        id: data.id,
+        name: data.name,
+        statuses: statuses.map(s => ({
+          id: s.id,
+          status: s.status,
+          orderindex: s.orderindex,
+          color: s.color,
+          type: s.type
+        }))
+      }
+    });
+  } catch (e) {
+    console.error('Error en /api/clickup/list-info:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ================================================================
 // CLICKUP SYNC → data/clientes.json + SSE(dataUpdated)
 // ================================================================
@@ -2030,12 +2067,41 @@ app.post('/api/clickup/sync', auth, async (req, res) => {
 // ================================================================
 // RUTA - PROXY DE TAREAS CLICKUP PARA EL FRONTEND (evita CORS)
 // El frontend llama GET /api/clickup/tasks cuando usa el servidor como proxy.
+// Retorna tareas PROCESADAS (mapeadas a clientes) no tareas RAW de ClickUp
 // ================================================================
 app.get('/api/clickup/tasks', auth, async (req, res) => {
   try {
-    const tasks = await obtenerTareasClickUp();
-    res.json({ tasks, meta: cacheMeta });
+    const apiKey = getClickUpApiKey();
+    const listId = getClickUpListId();
+    
+    // Obtener tareas RAW
+    const rawTasks = await obtenerTareasClickUpRaw({ apiKey, listId });
+    
+    // Procesar a clientes usando el mapper
+    const clients = await mapTasksToClients(rawTasks, {
+      DIAS_ALERTA: 7,
+      DIAS_META: CONFIG.DIAS_META,
+      PAISES: CONFIG.PAISES,
+      FERIADOS: CONFIG.FERIADOS,
+      TAREAS_IGNORAR: CONFIG.TAREAS_IGNORAR,
+      ESTADOS_IGNORAR: CONFIG.ESTADOS_IGNORAR,
+      ESTADOS_IMPL: CONFIG.ESTADOS_IMPL || []
+    }, {
+      tz: 'America/Sao_Paulo',
+      fetchTaskDetails: null
+    });
+    
+    res.json({ 
+      tasks: clients, 
+      meta: { 
+        ...cacheMeta, 
+        taskCount: clients.length,
+        totalRaw: rawTasks.length,
+        processedAt: new Date().toISOString()
+      } 
+    });
   } catch (e) {
+    console.error('Error en /api/clickup/tasks:', e.message);
     res.status(e.statusCode || 500).json({ error: e.message });
   }
 });

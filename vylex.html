@@ -1654,6 +1654,7 @@ tbody td{padding:10px 13px;font-size:12px;vertical-align:middle}
           <div style="display:flex;gap:8px;margin-top:12px">
             <button class="btn-primary" onclick="testClickUp()"><i class="fa fa-plug"></i> <span data-i18n="common.test">Probar</span></button>
             <button class="btn-outline" onclick="syncClickUp()"><i class="fa fa-rotate"></i> <span data-i18n="action.sync">Sincronizar</span></button>
+            <button class="btn-outline" onclick="showClickUpDiagnostics()"><i class="fa fa-stethoscope"></i> Diagnóstico</button>
           </div>
         </div>
         <div class="config-card">
@@ -4136,22 +4137,39 @@ async function syncClickUp(){
     }
     if(tasks&&tasks.length>0){
       updateLoadingMsg(`${t('toast.processing','Procesando')} ${tasks.length} ${t('toast.tasks','tareas')}...`);
-      APP.lastRawTasks=tasks;
-      safeLocalStorageSet('vylexLastRawTasksFingerprint', computeClickUpTasksFingerprint(tasks));
-      // Build custom field name -> id map for auto-sync of edits
-      try{
-        const sample=tasks.find(t=>Array.isArray(t?.custom_fields)&&t.custom_fields.length)||tasks[0];
-        const fields=Array.isArray(sample?.custom_fields)?sample.custom_fields:[];
-        const map={};
-        fields.forEach(f=>{
-          const id=String(f?.id||'').trim();
-          const name=String(f?.name||'').trim();
-          if(id&&name) map[normalizeText(name)] = id;
-        });
-        APP.clickupCustomFieldMap=map;
-      }catch{}
-      console.log(`📊 Sincronización exitosa. Obtenidas ${tasks.length} tareas de ClickUp.`);
-      APP.data=hydrateClients(processTasksToClients(tasks));
+      
+      // Si vienen del servidor (endpoint procesado), ya son clientes. Si vienen del frontend directo, son tareas RAW
+      let processedTasks = tasks;
+      
+      // Detectar si son tareas RAW (tienen estructura ClickUp) o ya están procesadas (tienen estructura de cliente)
+      const isRawTaskFormat = tasks[0] && tasks[0]?.custom_fields !== undefined && tasks[0]?.status?.status !== undefined;
+      
+      if(isRawTaskFormat) {
+        // Son tareas RAW, necesitan procesamiento
+        console.log(`📊 Recibidas ${tasks.length} tareas RAW de ClickUp. Procesando...`);
+        APP.lastRawTasks = tasks;
+        safeLocalStorageSet('vylexLastRawTasksFingerprint', computeClickUpTasksFingerprint(tasks));
+        
+        // Build custom field name -> id map
+        try{
+          const sample=tasks.find(t=>Array.isArray(t?.custom_fields)&&t.custom_fields.length)||tasks[0];
+          const fields=Array.isArray(sample?.custom_fields)?sample.custom_fields:[];
+          const map={};
+          fields.forEach(f=>{
+            const id=String(f?.id||'').trim();
+            const name=String(f?.name||'').trim();
+            if(id&&name) map[normalizeText(name)] = id;
+          });
+          APP.clickupCustomFieldMap=map;
+        }catch{}
+        
+        processedTasks = processTasksToClients(tasks);
+      } else {
+        // Ya están procesadas (vinieron del servidor)
+        console.log(`📊 Recibidas ${tasks.length} clientes YA PROCESADOS del servidor.`);
+      }
+      
+      APP.data=hydrateClients(processedTasks);
       console.log(`📊 Clientes procesados después de filtros: ${APP.data.length}`);
       
       APP.lastSync=new Date();
@@ -8651,7 +8669,19 @@ async function testClickUp(){
       const d=await resp.json();
       setHtml('clickupStatus',`<i class="fa fa-circle-check"></i> Conectado — Lista: ${escHtml(d.name||'OK')}`);
       document.getElementById('clickupStatus').className='api-status connected';
-      toast('success',`${t('toast.clickup_connected','ClickUp conectado')}: ${d.name}`);
+      
+      // Mostrar estados disponibles
+      const statuses = d.statuses || [];
+      const statusNames = statuses.map(s => s.status).join(', ');
+      console.log('✅ Estados disponibles en ClickUp:', statusNames);
+      console.log('📋 Estados configurados en CONFIG.ESTADOS_IMPL:', (CONFIG.ESTADOS_IMPL || []).join(', '));
+      
+      if(statuses.length > 0) {
+        const msg = `${t('toast.clickup_connected','ClickUp conectado')}: ${d.name}\n\nEstados: ${statusNames}\n\nRevisa la consola para más detalles.`;
+        toast('success', msg);
+      } else {
+        toast('success',`${t('toast.clickup_connected','ClickUp conectado')}: ${d.name}`);
+      }
     }else{
       document.getElementById('clickupStatus').className='api-status disconnected';
       setHtml('clickupStatus',`<i class="fa fa-circle-xmark"></i> Error ${resp.status}`);
@@ -11837,6 +11867,104 @@ async function rejectRequest(id) {
     toast('success', 'Solicitud rechazada');
     loadInternalRequests();
   } catch (e) { toast('error', e.message); }
+}
+
+// DIAGNÓSTICO DE CLICKUP: Muestra estados, filtros y ayuda a debuggear por qué no hay tareas
+async function showClickUpDiagnostics() {
+  const key = (document.getElementById('cfgApiKey')?.value || CONFIG.API_KEY || '').trim();
+  const listId = (document.getElementById('cfgListId')?.value || CONFIG.LIST_ID || '').trim();
+  
+  if (!key || !listId) {
+    toast('warning', 'Completa API Key y List ID para diagnóstico');
+    return;
+  }
+  
+  showLoading(true, 'Ejecutando diagnóstico...');
+  try {
+    // Obtener info de la lista (estados)
+    const listResp = await fetch(`https://api.clickup.com/api/v2/list/${listId}`, {
+      headers: { Authorization: key }
+    });
+    if (!listResp.ok) throw new Error(`Error lista: ${listResp.status}`);
+    const listData = await listResp.json();
+    
+    // Obtener tareas RAW
+    const tasksResp = await fetch(`https://api.clickup.com/api/v2/list/${listId}/task?page=0&include_closed=true&archived=false&limit=100`, {
+      headers: { Authorization: key }
+    });
+    if (!tasksResp.ok) throw new Error(`Error tareas: ${tasksResp.status}`);
+    const tasksData = await tasksResp.json();
+    
+    const allTasks = tasksData.tasks || [];
+    const statuses = listData.statuses || [];
+    
+    // Contar tareas por estado
+    const countByStatus = {};
+    const tasksByStatus = {};
+    allTasks.forEach(t => {
+      const statusName = t.status?.status || 'Sin estado';
+      countByStatus[statusName] = (countByStatus[statusName] || 0) + 1;
+      if (!tasksByStatus[statusName]) tasksByStatus[statusName] = [];
+      tasksByStatus[statusName].push({ id: t.id, name: t.name });
+    });
+    
+    // Comparar con CONFIG.ESTADOS_IMPL
+    const configEstados = CONFIG.ESTADOS_IMPL || [];
+    const statsMsg = `
+╔════════════════════════════════════════════════════════════╗
+║              🔍 DIAGNÓSTICO CLICKUP                        ║
+╚════════════════════════════════════════════════════════════╝
+
+📋 LISTA: ${listData.name}
+   ID: ${listId}
+
+📊 TAREAS POR ESTADO (ClickUp):
+${Object.entries(countByStatus)
+  .sort((a, b) => b[1] - a[1])
+  .map(([estado, count]) => `   • ${estado}: ${count} tareas`)
+  .join('\n')}
+
+⚙️ ESTADOS CONFIGURADOS EN CONFIG.ESTADOS_IMPL:
+${configEstados.length > 0 
+  ? configEstados.map(e => `   • ${e}`).join('\n')
+  : '   (vacío o no definido - se cargarán TODAS las tareas no ignoradas)'}
+
+⚠️ VALIDACIÓN:
+${configEstados.length === 0 
+  ? '   ✅ CONFIG.ESTADOS_IMPL vacío: Todas las tareas se cargarán'
+  : Object.entries(countByStatus)
+      .map(([estado]) => {
+        const isConfigured = configEstados.some(ce => 
+          String(ce).toLowerCase().includes(String(estado).toLowerCase()) || 
+          String(estado).toLowerCase().includes(String(ce).toLowerCase())
+        );
+        return `   ${isConfigured ? '✅' : '⚠️'} "${estado}" ${isConfigured ? '(COINCIDE)' : '(no coincide con config)'}`;
+      })
+      .join('\n')}
+
+🔧 DATOS IGNORADOS (CONFIG):
+   • TAREAS_IGNORAR: ${(CONFIG.TAREAS_IGNORAR || []).length} reglas
+   • ESTADOS_IGNORAR: ${(CONFIG.ESTADOS_IGNORAR || []).length} estados
+
+💡 PRÓXIMOS PASOS:
+1. Si ves estados que NO debería cargar, agrega a CONFIG.ESTADOS_IGNORAR
+2. Si ves estados que SÍ deberían cargar, agrega a CONFIG.ESTADOS_IMPL
+3. Haz clic en "Sincronizar" después de cambiar la configuración
+════════════════════════════════════════════════════════════`;
+
+    console.clear();
+    console.log(statsMsg);
+    console.log('\n📝 Detalles de tareas por estado:', tasksByStatus);
+    console.log('\n📋 Configuración completa:', { configEstados, TAREAS_IGNORAR: CONFIG.TAREAS_IGNORAR, ESTADOS_IGNORAR: CONFIG.ESTADOS_IGNORAR });
+    
+    showLoading(false);
+    alert(statsMsg);
+    
+  } catch (e) {
+    showLoading(false);
+    console.error('Error diagnóstico:', e);
+    toast('error', `Error: ${e.message}`);
+  }
 }
 
 // FIX: CONFIG.MESES no existía en el CONFIG del frontend — causaba error en gráficos CS (renderCS L7013)

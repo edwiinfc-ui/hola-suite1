@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
+  <meta name="apple-mobile-web-app-capable" content="true">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta name="theme-color" content="#3C50E0">
+  <title>VY - LEX — Modern Control Center v2</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- XLSX for Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <!-- Sortable.js -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  
+  <!-- Modern Dashboard CSS -->
+  <link rel="stylesheet" href="/css/modern-dashboard.css">
+  
+  <!-- Responsive CSS -->
+  <link rel="stylesheet" href="/css/responsive.css">
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="p-4 border-b flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-lg flex items-center justify-center text-white font-bold">
+          <i class="fas fa-brain"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-gray-900 text-sm">VY - LEX</h1>
+          <p class="text-xs text-gray-500">Control Center</p>
+        </div>
+      </div>
+      <button onclick="toggleSidebar()" class="md:hidden text-gray-600 hover:text-primary">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto p-3">
+      <div class="mb-6">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-3 px-2">Principal</p>
+        <a href="#" onclick="showSection('dashboard')" class="nav-link active"><i class="fas fa-chart-line w-4"></i> Dashboard</a>
+        <a href="#" onclick="showSection('panoramic')" class="nav-link"><i class="fas fa-eye w-4"></i> Panorámica</a>
+        <a href="#" onclick="showSection('alertas')" class="nav-link"><i class="fas fa-bell w-4"></i> Alertas</a>
+      </div>
+
+      <div class="mb-6">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-3 px-2">Clientes</p>
+        <a href="#" onclick="showSection('implementaciones')" class="nav-link"><i class="fas fa-gears w-4"></i> Implementaciones</a>
+        <a href="#" onclick="showSection('activos')" class="nav-link"><i class="fas fa-circle-check w-4"></i> Activos</a>
+        <a href="#" onclick="showSection('cancelados')" class="nav-link"><i class="fas fa-circle-xmark w-4"></i> Cancelados</a>
+      </div>
+
+      <div class="mb-6">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-3 px-2">CS Team</p>
+        <a href="#" onclick="showSection('cs')" class="nav-link"><i class="fas fa-headset w-4"></i> CS Dashboard</a>
+        <a href="#" onclick="showSection('opa')" class="nav-link"><i class="fas fa-message w-4"></i> OPA Suite</a>
+      </div>
+
+      <div class="mb-6">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-3 px-2">Análisis</p>
+        <a href="#" onclick="showSection('vendedores')" class="nav-link"><i class="fas fa-user-tie w-4"></i> Vendedores</a>
+        <a href="#" onclick="showSection('consultores')" class="nav-link"><i class="fas fa-users w-4"></i> Consultores</a>
+        <a href="#" onclick="showSection('bi')" class="nav-link"><i class="fas fa-chart-pie w-4"></i> BI / Estadísticas</a>
+        <a href="#" onclick="showSection('metas')" class="nav-link"><i class="fas fa-bullseye w-4"></i> Metas</a>
+      </div>
+
+      <div class="mb-6">
+        <p class="text-xs font-bold text-gray-500 uppercase mb-3 px-2">Sistema</p>
+        <a href="#" onclick="showSection('usuarios')" class="nav-link"><i class="fas fa-user-gear w-4"></i> Usuarios</a>
+        <a href="#" onclick="showSection('config')" class="nav-link"><i class="fas fa-sliders w-4"></i> Configuración</a>
+      </div>
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="p-3 border-t">
+      <button onclick="syncClickUp()" class="w-full btn btn-primary btn-sm justify-center">
+        <i class="fas fa-rotate"></i> Sincronizar
+      </button>
+      <button onclick="doLogout()" class="w-full btn btn-danger btn-sm justify-center mt-2">
+        <i class="fas fa-sign-out-alt"></i> Salir
+      </button>
+    </div>
+  </aside>
+
+  <!-- Nav Link Styles -->
+  <style>
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      margin-bottom: 4px;
+    }
+    .nav-link:hover {
+      color: var(--primary);
+      background: rgba(60, 80, 224, 0.08);
+    }
+    .nav-link.active {
+      color: var(--primary);
+      background: rgba(60, 80, 224, 0.15);
+      font-weight: 600;
+      border-left: 3px solid var(--primary);
+      padding-left: 11px;
+    }
+  </style>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="flex items-center gap-4">
+      <button onclick="toggleSidebar()" class="md:hidden text-xl text-gray-600 hover:text-primary">
+        <i class="fas fa-bars"></i>
+      </button>
+      <h2 class="text-xl font-bold text-gray-900" id="pageTitle">Dashboard</h2>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="relative hidden md:flex items-center">
+        <i class="fas fa-search absolute left-3 text-gray-400"></i>
+        <input type="text" placeholder="Buscar cliente..." class="form-control pl-10" style="width: 200px;">
+      </div>
+      <button class="btn btn-icon btn-secondary">
+        <i class="fas fa-bell"></i>
+      </button>
+      <button class="btn btn-icon btn-secondary" onclick="toggleDarkMode()">
+        <i class="fas fa-sun"></i>
+      </button>
+      <div class="flex items-center gap-3">
+        <img src="https://ui-avatars.com/api/?name=Admin&background=3C50E0&color=fff" alt="Avatar" class="w-9 h-9 rounded-full">
+        <span class="text-sm font-semibold" id="userDisplay">Admin</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+
+    <!-- Dashboard Section -->
+    <section id="dashboard" class="section active animate-fade">
+      <div class="grid grid-cols-4 gap-6 mb-8">
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-gray-500">Total Clientes</p>
+              <p class="text-3xl font-bold mt-2" id="totalClientes">0</p>
+              <p class="text-xs text-gray-400 mt-2"><i class="fas fa-arrow-up text-success"></i> +12% vs mes</p>
+            </div>
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-users text-blue-600 text-lg"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-gray-500">En Implementación</p>
+              <p class="text-3xl font-bold mt-2" id="enImplementacion">0</p>
+              <p class="text-xs text-gray-400 mt-2"><i class="fas fa-arrow-right text-warning"></i> En proceso</p>
+            </div>
+            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-gears text-yellow-600 text-lg"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-gray-500">Activos</p>
+              <p class="text-3xl font-bold mt-2" id="activos">0</p>
+              <p class="text-xs text-gray-400 mt-2"><i class="fas fa-check text-success"></i> Operativo</p>
+            </div>
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-circle-check text-green-600 text-lg"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="text-sm text-gray-500">Conversaciones</p>
+              <p class="text-3xl font-bold mt-2" id="totalConversaciones">0</p>
+              <p class="text-xs text-gray-400 mt-2"><i class="fas fa-arrow-up text-success"></i> +5 nuevas</p>
+            </div>
+            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-comments text-purple-600 text-lg"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-2 gap-6">
+        <div class="card">
+          <h3 class="text-lg font-semibold mb-4">Clientes por Estado</h3>
+          <canvas id="clientesChart" style="max-height: 250px;"></canvas>
+        </div>
+
+        <div class="card">
+          <h3 class="text-lg font-semibold mb-4">Actividad Reciente</h3>
+          <div class="space-y-3">
+            <div class="flex items-center">
+              <div class="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+              <span class="text-sm">Nuevo cliente registrado</span>
+              <span class="ml-auto text-xs text-gray-400">Hace 5 min</span>
+            </div>
+            <div class="flex items-center">
+              <div class="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
+              <span class="text-sm">Implementación completada</span>
+              <span class="ml-auto text-xs text-gray-400">Hace 2 horas</span>
+            </div>
+            <div class="flex items-center">
+              <div class="w-2 h-2 bg-orange-500 rounded-full mr-3"></div>
+              <span class="text-sm">Mensaje nuevo en OPA</span>
+              <span class="ml-auto text-xs text-gray-400">Hace 4 horas</span>
+            </div>
+            <div class="flex items-center">
+              <div class="w-2 h-2 bg-red-500 rounded-full mr-3"></div>
+              <span class="text-sm">Cliente cancelado</span>
+              <span class="ml-auto text-xs text-gray-400">Hace 1 día</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Placeholder for other sections -->
+    <section id="panoramic" class="section hidden animate-fade">
+      <div class="card text-center p-12">
+        <i class="fas fa-eye text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-2xl font-semibold mb-2">Panorámica</h3>
+        <p class="text-gray-500">Sección en construcción</p>
+      </div>
+    </section>
+
+    <section id="alertas" class="section hidden animate-fade">
+      <div class="card text-center p-12">
+        <i class="fas fa-bell text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-2xl font-semibold mb-2">Alertas</h3>
+        <p class="text-gray-500">Sección en construcción</p>
+      </div>
+    </section>
+
+    <section id="implementaciones" class="section hidden animate-fade">
+      <div class="card text-center p-12">
+        <i class="fas fa-gears text-4xl text-gray-300 mb-4"></i>
+        <h3 class="text-2xl font-semibold mb-2">Implementaciones</h3>
+        <p class="text-gray-500">Sección en construcción</p>
+      </div>
+    </section>
+
+    <section id="config" class="section hidden animate-fade">
+      <div class="card">
+        <h3 class="text-xl font-semibold mb-6">Configuración</h3>
+        <div class="grid grid-cols-2 gap-6">
+          <div class="form-group">
+            <label class="form-label">API Key ClickUp</label>
+            <input type="password" class="form-control" id="cfgApiKey">
+          </div>
+          <div class="form-group">
+            <label class="form-label">List ID ClickUp</label>
+            <input type="text" class="form-control" id="cfgListId">
+          </div>
+        </div>
+        <button onclick="saveConfig()" class="btn btn-primary mt-6">
+          <i class="fas fa-save"></i> Guardar Configuración
+        </button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay hidden" style="display: none;">
+    <div class="text-center">
+      <div class="spinner mx-auto mb-4"></div>
+      <p class="text-white text-lg font-semibold" id="loadingMsg">Cargando datos...</p>
+    </div>
+  </div>
+
+  <!-- Import scripts -->
+  <script src="/js/modern-dashboard.js"></script>
+  <script src="/js/responsive-manager.js"></script>
+  <script src="/js/session-persistence.js"></script>
+
+</body>
+</html>

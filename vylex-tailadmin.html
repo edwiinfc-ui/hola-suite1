@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5">
+  <meta name="apple-mobile-web-app-capable" content="true">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <meta name="theme-color" content="#3C50E0">
+  <title>VY - LEX — Modern Dashboard with TailAdmin</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  
+  <!-- Responsive CSS -->
+  <link rel="stylesheet" href="/css/responsive.css">
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <!-- XLSX for Excel export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
+  <!-- Sortable.js -->
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+  
+  <!-- Alpine.js for interactivity -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  
+  <style>
+    /* ===== TAILADMIN INSPIRED COLOR SCHEME ===== */
+    :root {
+      --primary: #3C50E0;
+      --primary-dark: #2E3FA0;
+      --primary-light: #5B6FE7;
+      --success: #13C296;
+      --warning: #FFA500;
+      --danger: #FB5454;
+      --info: #3C50E0;
+      --dark: #111827;
+      --darker: #030712;
+      --light: #F3F4F6;
+      --lighter: #FFFFFF;
+      --card: #F9FAFB;
+      --card-dark: #1F2937;
+      --border: #E5E7EB;
+      --border-dark: #374151;
+      --text-primary: #111827;
+      --text-secondary: #6B7280;
+      --text-light: #9CA3AF;
+      --sidebar: 270px;
+      --glow: 0 0 20px rgba(60, 80, 224, 0.1);
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Outfit', 'Segoe UI', system-ui, sans-serif;
+      background-color: var(--lighter);
+      color: var(--text-primary);
+      overflow-x: hidden;
+    }
+
+    /* Dark Mode */
+    body.dark {
+      background-color: var(--darker);
+      color: var(--lighter);
+    }
+
+    body.dark .card {
+      background-color: var(--card-dark);
+      border-color: var(--border-dark);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--light);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 4px;
+    }
+
+    body.dark ::-webkit-scrollbar-track {
+      background: var(--card-dark);
+    }
+
+    /* Cards */
+    .card {
+      background-color: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .card.active {
+      border-color: var(--primary);
+      background-color: rgba(60, 80, 224, 0.02);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-dark);
+      box-shadow: 0 0 15px rgba(60, 80, 224, 0.3);
+    }
+
+    .btn-secondary {
+      background-color: var(--light);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background-color: var(--border);
+    }
+
+    .btn-sm {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    .btn-icon {
+      width: 2.5rem;
+      height: 2.5rem;
+      padding: 0;
+      border-radius: 50%;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: var(--sidebar);
+      background-color: var(--card);
+      border-right: 1px solid var(--border);
+      height: 100vh;
+      overflow-y: auto;
+      transition: all 0.3s ease;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 999;
+    }
+
+    body.dark .sidebar {
+      background-color: var(--card-dark);
+      border-right-color: var(--border-dark);
+    }
+
+    .sidebar-toggle {
+      display: none;
+      width: 2.5rem;
+      height: 2.5rem;
+      background-color: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Header */
+    .header {
+      background-color: var(--lighter);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 70px;
+      margin-left: var(--sidebar);
+      transition: all 0.3s ease;
+    }
+
+    body.dark .header {
+      background-color: var(--card-dark);
+      border-bottom-color: var(--border-dark);
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: var(--sidebar);
+      padding: 2rem;
+      min-height: 100vh;
+      transition: all 0.3s ease;
+    }
+
+    /* Grid System */
+    .grid-cols-1 { display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); }
+    .grid-cols-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid-cols-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-cols-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .gap-4 { gap: 1rem; }
+    .gap-6 { gap: 1.5rem; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        transform: translateX(-100%);
+      }
+
+      .sidebar.active {
+        transform: translateX(0);
+      }
+
+      .sidebar-toggle {
+        display: flex;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 1rem;
+      }
+
+      .header {
+        margin-left: 0;
+      }
+
+      .grid-cols-2 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+      .grid-cols-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .badge-primary {
+      background-color: rgba(60, 80, 224, 0.1);
+      color: var(--primary);
+    }
+
+    .badge-success {
+      background-color: rgba(19, 194, 150, 0.1);
+      color: var(--success);
+    }
+
+    .badge-warning {
+      background-color: rgba(255, 165, 0, 0.1);
+      color: var(--warning);
+    }
+
+    .badge-danger {
+      background-color: rgba(251, 84, 84, 0.1);
+      color: var(--danger);
+    }
+
+    /* Tables */
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .table thead {
+      background-color: var(--light);
+    }
+
+    body.dark .table thead {
+      background-color: var(--card-dark);
+    }
+
+    .table th {
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--text-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    body.dark .table th {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .table td {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    body.dark .table td {
+      border-bottom-color: var(--border-dark);
+    }
+
+    .table tbody tr:hover {
+      background-color: var(--light);
+    }
+
+    body.dark .table tbody tr:hover {
+      background-color: var(--card-dark);
+    }
+
+    /* Forms */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 0.625rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background-color: var(--card);
+      color: var(--text-primary);
+    }
+
+    body.dark .form-control {
+      background-color: var(--card-dark);
+      border-color: var(--border-dark);
+      color: var(--lighter);
+    }
+
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(60, 80, 224, 0.1);
+    }
+
+    /* Loading Animation */
+    .spinner {
+      border: 4px solid var(--light);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      width: 2rem;
+      height: 2rem;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Animations */
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .animate-slide {
+      animation: slideDown 0.3s ease;
+    }
+
+    .animate-fade {
+      animation: fadeIn 0.3s ease;
+    }
+
+    /* Utilities */
+    .hidden { display: none !important; }
+    .visible { display: block !important; }
+    .opacity-50 { opacity: 0.5; }
+    .cursor-pointer { cursor: pointer; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .text-left { text-align: left; }
+    .font-bold { font-weight: 700; }
+    .font-semibold { font-weight: 600; }
+    .font-medium { font-weight: 500; }
+    .text-sm { font-size: 0.875rem; }
+    .text-lg { font-size: 1.125rem; }
+    .text-xl { font-size: 1.25rem; }
+    .text-2xl { font-size: 1.5rem; }
+    .w-full { width: 100%; }
+    .h-full { height: 100%; }
+    .mt-0 { margin-top: 0; }
+    .mt-2 { margin-top: 0.5rem; }
+    .mt-4 { margin-top: 1rem; }
+    .mb-2 { margin-bottom: 0.5rem; }
+    .mb-4 { margin-bottom: 1rem; }
+    .p-2 { padding: 0.5rem; }
+    .p-4 { padding: 1rem; }
+    .px-4 { padding-left: 1rem; padding-right: 1rem; }
+    .py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .items-center { align-items: center; }
+    .justify-between { justify-content: space-between; }
+    .justify-center { justify-content: center; }
+    .space-y-2 > * + * { margin-top: 0.5rem; }
+    .space-y-4 > * + * { margin-top: 1rem; }
+    .space-x-2 > * + * { margin-left: 0.5rem; }
+    .space-x-4 > * + * { margin-left: 1rem; }
+  </style>
+</head>
+<body x-data="dashboardApp()" :class="{ 'dark': darkMode }">
+
+  <!-- Sidebar Start -->
+  <aside class="sidebar" :class="{ 'active': sidebarOpen }">
+    <div class="flex items-center justify-between p-4">
+      <h1 class="text-2xl font-bold text-primary">
+        <i class="fas fa-brain"></i> VY - LEX
+      </h1>
+      <button @click="sidebarOpen = false" class="sidebar-toggle md:hidden">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <nav class="mt-8">
+      <div class="px-4 py-2">
+        <p class="text-sm font-semibold text-text-secondary uppercase mb-4">Menu Principal</p>
+        
+        <a href="#dashboard" @click="setPage('dashboard')" :class="{ 'bg-primary text-white': page === 'dashboard', 'text-text-secondary hover:text-text-primary': page !== 'dashboard' }" class="block px-4 py-3 rounded-md transition mb-2">
+          <i class="fas fa-chart-line mr-2"></i> Dashboard
+        </a>
+
+        <a href="#tareas" @click="setPage('tareas')" :class="{ 'bg-primary text-white': page === 'tareas', 'text-text-secondary hover:text-text-primary': page !== 'tareas' }" class="block px-4 py-3 rounded-md transition mb-2">
+          <i class="fas fa-tasks mr-2"></i> Tareas
+        </a>
+
+        <a href="#contactos" @click="setPage('contactos')" :class="{ 'bg-primary text-white': page === 'contactos', 'text-text-secondary hover:text-text-primary': page !== 'contactos' }" class="block px-4 py-3 rounded-md transition mb-2">
+          <i class="fas fa-users mr-2"></i> Contactos
+        </a>
+
+        <a href="#conversaciones" @click="setPage('conversaciones')" :class="{ 'bg-primary text-white': page === 'conversaciones', 'text-text-secondary hover:text-text-primary': page !== 'conversaciones' }" class="block px-4 py-3 rounded-md transition mb-2">
+          <i class="fas fa-comments mr-2"></i> Conversaciones
+        </a>
+
+        <a href="#reportes" @click="setPage('reportes')" :class="{ 'bg-primary text-white': page === 'reportes', 'text-text-secondary hover:text-text-primary': page !== 'reportes' }" class="block px-4 py-3 rounded-md transition">
+          <i class="fas fa-file-alt mr-2"></i> Reportes
+        </a>
+      </div>
+
+      <div class="px-4 py-2 border-t mt-8">
+        <p class="text-sm font-semibold text-text-secondary uppercase mb-4">Configuración</p>
+        
+        <a href="#settings" @click="setPage('settings')" :class="{ 'bg-primary text-white': page === 'settings', 'text-text-secondary hover:text-text-primary': page !== 'settings' }" class="block px-4 py-3 rounded-md transition mb-2">
+          <i class="fas fa-cog mr-2"></i> Configuración
+        </a>
+
+        <button @click="darkMode = !darkMode" class="w-full text-left px-4 py-3 rounded-md transition text-text-secondary hover:text-text-primary mb-2">
+          <i :class="darkMode ? 'fas fa-sun' : 'fas fa-moon'" class="mr-2"></i>
+          <span x-text="darkMode ? 'Modo Claro' : 'Modo Oscuro'"></span>
+        </button>
+
+        <button @click="logout()" class="w-full text-left px-4 py-3 rounded-md transition text-danger hover:bg-danger hover:text-white">
+          <i class="fas fa-sign-out-alt mr-2"></i> Cerrar Sesión
+        </button>
+      </div>
+    </nav>
+  </aside>
+  <!-- Sidebar End -->
+
+  <!-- Main Content Start -->
+  <div class="flex flex-col flex-1" :style="{ marginLeft: sidebarOpen || window.innerWidth > 768 ? 'var(--sidebar)' : '0' }">
+
+    <!-- Header Start -->
+    <header class="header">
+      <div class="flex items-center">
+        <button @click="sidebarOpen = !sidebarOpen" class="sidebar-toggle mr-4">
+          <i class="fas fa-bars"></i>
+        </button>
+        <h2 x-text="pageTitle" class="text-xl font-semibold"></h2>
+      </div>
+
+      <div class="flex items-center space-x-4">
+        <div class="flex items-center">
+          <input type="search" placeholder="Buscar..." class="form-control mr-2" style="width: 200px;">
+        </div>
+        <button class="btn btn-icon btn-secondary">
+          <i class="fas fa-bell"></i>
+        </button>
+        <div class="flex items-center cursor-pointer">
+          <img src="https://ui-avatars.com/api/?name=User&background=3C50E0&color=fff" alt="Avatar" class="w-10 h-10 rounded-full mr-2">
+          <span class="text-sm font-medium">Usuario</span>
+        </div>
+      </div>
+    </header>
+    <!-- Header End -->
+
+    <!-- Main Content Area Start -->
+    <main class="main-content overflow-auto">
+
+      <!-- Dashboard Page -->
+      <div x-show="page === 'dashboard'" class="animate-fade">
+        <div class="grid grid-cols-4 gap-6 mb-8">
+          <!-- Stats Cards -->
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-text-secondary">Total Tareas</p>
+                <p class="text-2xl font-bold mt-2" x-text="stats.totalTasks"></p>
+              </div>
+              <div class="w-12 h-12 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center text-primary">
+                <i class="fas fa-tasks fa-lg"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-text-secondary">En Progreso</p>
+                <p class="text-2xl font-bold mt-2" x-text="stats.inProgress"></p>
+              </div>
+              <div class="w-12 h-12 bg-warning bg-opacity-10 rounded-lg flex items-center justify-center text-warning">
+                <i class="fas fa-hourglass-half fa-lg"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-text-secondary">Completadas</p>
+                <p class="text-2xl font-bold mt-2" x-text="stats.completed"></p>
+              </div>
+              <div class="w-12 h-12 bg-success bg-opacity-10 rounded-lg flex items-center justify-center text-success">
+                <i class="fas fa-check-circle fa-lg"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm text-text-secondary">Conversaciones</p>
+                <p class="text-2xl font-bold mt-2" x-text="stats.conversations"></p>
+              </div>
+              <div class="w-12 h-12 bg-info bg-opacity-10 rounded-lg flex items-center justify-center text-info">
+                <i class="fas fa-comments fa-lg"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid grid-cols-2 gap-6">
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Tareas por Estado</h3>
+            <canvas id="tasksChart"></canvas>
+          </div>
+
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Actividad Reciente</h3>
+            <div class="space-y-3">
+              <div class="flex items-center">
+                <div class="w-2 h-2 bg-primary rounded-full mr-3"></div>
+                <span class="text-sm">Nueva tarea creada</span>
+                <span class="ml-auto text-xs text-text-secondary">Hace 5 min</span>
+              </div>
+              <div class="flex items-center">
+                <div class="w-2 h-2 bg-success rounded-full mr-3"></div>
+                <span class="text-sm">Tarea completada</span>
+                <span class="ml-auto text-xs text-text-secondary">Hace 15 min</span>
+              </div>
+              <div class="flex items-center">
+                <div class="w-2 h-2 bg-warning rounded-full mr-3"></div>
+                <span class="text-sm">Comentario añadido</span>
+                <span class="ml-auto text-xs text-text-secondary">Hace 1 hora</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tareas Page -->
+      <div x-show="page === 'tareas'" class="animate-fade">
+        <div class="card">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold">Gestión de Tareas</h3>
+            <button @click="showTaskForm = true" class="btn btn-primary btn-sm">
+              <i class="fas fa-plus mr-2"></i> Nueva Tarea
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Título</th>
+                  <th>Estado</th>
+                  <th>Prioridad</th>
+                  <th>Asignado</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="task in tasks" :key="task.id">
+                  <tr>
+                    <td class="font-mono text-sm"><span x-text="task.id"></span></td>
+                    <td><span x-text="task.title"></span></td>
+                    <td>
+                      <span class="badge" :class="'badge-' + task.status">
+                        <span x-text="task.status"></span>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge" :class="'badge-' + task.priority">
+                        <span x-text="task.priority"></span>
+                      </span>
+                    </td>
+                    <td><span x-text="task.assignee"></span></td>
+                    <td>
+                      <button class="btn btn-secondary btn-sm mr-2">
+                        <i class="fas fa-edit"></i>
+                      </button>
+                      <button class="btn btn-secondary btn-sm text-danger">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contactos Page -->
+      <div x-show="page === 'contactos'" class="animate-fade">
+        <div class="card">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold">Contactos</h3>
+            <button @click="showContactForm = true" class="btn btn-primary btn-sm">
+              <i class="fas fa-plus mr-2"></i> Nuevo Contacto
+            </button>
+          </div>
+
+          <div class="grid grid-cols-3 gap-6">
+            <template x-for="contact in contacts" :key="contact.id">
+              <div class="card">
+                <div class="flex items-center mb-4">
+                  <img :src="'https://ui-avatars.com/api/?name=' + contact.name" class="w-12 h-12 rounded-full mr-4">
+                  <div>
+                    <p class="font-semibold" x-text="contact.name"></p>
+                    <p class="text-sm text-text-secondary" x-text="contact.email"></p>
+                  </div>
+                </div>
+                <p class="text-sm mb-4" x-text="contact.company"></p>
+                <div class="flex space-x-2">
+                  <button class="btn btn-secondary btn-sm flex-1">Editar</button>
+                  <button class="btn btn-secondary btn-sm flex-1 text-danger">Eliminar</button>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conversaciones Page -->
+      <div x-show="page === 'conversaciones'" class="animate-fade">
+        <div class="card">
+          <h3 class="text-lg font-semibold mb-6">Conversaciones</h3>
+          <div class="space-y-4">
+            <template x-for="conversation in conversations" :key="conversation.id">
+              <div class="card border-l-4" :style="{ 'border-left-color': 'var(--primary)' }">
+                <div class="flex justify-between items-start mb-2">
+                  <h4 class="font-semibold" x-text="conversation.subject"></h4>
+                  <span class="text-xs text-text-secondary" x-text="conversation.date"></span>
+                </div>
+                <p class="text-sm text-text-secondary mb-3" x-text="conversation.preview"></p>
+                <button class="btn btn-primary btn-sm">Abrir</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reportes Page -->
+      <div x-show="page === 'reportes'" class="animate-fade">
+        <div class="grid grid-cols-2 gap-6">
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Reporte de Actividad</h3>
+            <canvas id="activityChart"></canvas>
+          </div>
+
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Reporte de Ventas</h3>
+            <canvas id="salesChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Settings Page -->
+      <div x-show="page === 'settings'" class="animate-fade">
+        <div class="grid grid-cols-2 gap-6">
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-6">Configuración General</h3>
+            <div class="form-group">
+              <label class="form-label">Nombre de la Empresa</label>
+              <input type="text" class="form-control" value="Mi Empresa">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Principal</label>
+              <input type="email" class="form-control" value="info@miempresa.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Teléfono</label>
+              <input type="tel" class="form-control" value="+34 123 456 789">
+            </div>
+            <button class="btn btn-primary w-full">Guardar Cambios</button>
+          </div>
+
+          <div class="card">
+            <h3 class="text-lg font-semibold mb-6">Integraciones</h3>
+            <div class="space-y-4">
+              <div class="flex items-center justify-between p-4 bg-light rounded-lg">
+                <div>
+                  <p class="font-semibold">ClickUp</p>
+                  <p class="text-sm text-text-secondary">Gestión de tareas</p>
+                </div>
+                <button class="btn btn-secondary btn-sm">Conectar</button>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-light rounded-lg">
+                <div>
+                  <p class="font-semibold">Gmail</p>
+                  <p class="text-sm text-text-secondary">Gestión de emails</p>
+                </div>
+                <button class="btn btn-secondary btn-sm">Conectar</button>
+              </div>
+              <div class="flex items-center justify-between p-4 bg-light rounded-lg">
+                <div>
+                  <p class="font-semibold">WhatsApp</p>
+                  <p class="text-sm text-text-secondary">Mensajería</p>
+                </div>
+                <button class="btn btn-secondary btn-sm">Conectar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+    <!-- Main Content Area End -->
+
+  </div>
+  <!-- Main Content End -->
+
+  <!-- Alpine.js App Logic -->
+  <script>
+    function dashboardApp() {
+      return {
+        page: 'dashboard',
+        pageTitle: 'Dashboard',
+        darkMode: localStorage.getItem('darkMode') === 'true',
+        sidebarOpen: window.innerWidth > 768,
+        showTaskForm: false,
+        showContactForm: false,
+
+        stats: {
+          totalTasks: 24,
+          inProgress: 8,
+          completed: 12,
+          conversations: 156
+        },
+
+        tasks: [
+          { id: 'T001', title: 'Actualizar Dashboard', status: 'primary', priority: 'danger', assignee: 'Juan' },
+          { id: 'T002', title: 'Revisar API', status: 'warning', priority: 'warning', assignee: 'María' },
+          { id: 'T003', title: 'Testing', status: 'success', priority: 'primary', assignee: 'Pedro' },
+        ],
+
+        contacts: [
+          { id: 1, name: 'Carlos López', email: 'carlos@empresa.com', company: 'Empresa ABC' },
+          { id: 2, name: 'Ana García', email: 'ana@empresa.com', company: 'Empresa XYZ' },
+          { id: 3, name: 'Miguel Rodríguez', email: 'miguel@empresa.com', company: 'Empresa 123' },
+        ],
+
+        conversations: [
+          { id: 1, subject: 'Propuesta de nuevo proyecto', preview: 'Hemos estado trabajando en una propuesta...', date: '2026-04-09' },
+          { id: 2, subject: 'Seguimiento de reunión', preview: 'Muchas gracias por la reunión de hoy...', date: '2026-04-08' },
+          { id: 3, subject: 'Documentación técnica', preview: 'Adjunto encontrarás la documentación...', date: '2026-04-07' },
+        ],
+
+        setPage(newPage) {
+          this.page = newPage;
+          const pageNames = {
+            'dashboard': 'Dashboard',
+            'tareas': 'Gestión de Tareas',
+            'contactos': 'Contactos',
+            'conversaciones': 'Conversaciones',
+            'reportes': 'Reportes',
+            'settings': 'Configuración'
+          };
+          this.pageTitle = pageNames[newPage] || 'Dashboard';
+          this.sidebarOpen = false;
+        },
+
+        logout() {
+          if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+            localStorage.clear();
+            window.location.href = '/login';
+          }
+        },
+
+        init() {
+          // Watch dark mode changes
+          this.$watch('darkMode', (value) => {
+            localStorage.setItem('darkMode', value);
+            document.documentElement.style.colorScheme = value ? 'dark' : 'light';
+          });
+
+          // Initialize charts after a small delay
+          setTimeout(() => {
+            this.initCharts();
+          }, 500);
+
+          // Handle window resize
+          window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+              this.sidebarOpen = true;
+            }
+          });
+        },
+
+        initCharts() {
+          // Tasks Chart
+          const tasksCtx = document.getElementById('tasksChart');
+          if (tasksCtx) {
+            new Chart(tasksCtx, {
+              type: 'doughnut',
+              data: {
+                labels: ['Completadas', 'En Progreso', 'Pendientes'],
+                datasets: [{
+                  data: [12, 8, 4],
+                  backgroundColor: [
+                    'rgba(19, 194, 150, 0.8)',
+                    'rgba(255, 165, 0, 0.8)',
+                    'rgba(60, 80, 224, 0.8)',
+                  ],
+                  borderColor: [
+                    'rgba(19, 194, 150, 1)',
+                    'rgba(255, 165, 0, 1)',
+                    'rgba(60, 80, 224, 1)',
+                  ],
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: {
+                    position: 'bottom'
+                  }
+                }
+              }
+            });
+          }
+
+          // Activity Chart
+          const activityCtx = document.getElementById('activityChart');
+          if (activityCtx) {
+            new Chart(activityCtx, {
+              type: 'line',
+              data: {
+                labels: ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'],
+                datasets: [{
+                  label: 'Actividad',
+                  data: [65, 59, 80, 81, 56, 55, 40],
+                  borderColor: 'rgba(60, 80, 224, 1)',
+                  backgroundColor: 'rgba(60, 80, 224, 0.1)',
+                  tension: 0.3,
+                  fill: true
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: {
+                    display: false
+                  }
+                }
+              }
+            });
+          }
+
+          // Sales Chart
+          const salesCtx = document.getElementById('salesChart');
+          if (salesCtx) {
+            new Chart(salesCtx, {
+              type: 'bar',
+              data: {
+                labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'],
+                datasets: [{
+                  label: 'Ventas',
+                  data: [12000, 19000, 3000, 5000, 2000, 3000],
+                  backgroundColor: 'rgba(60, 80, 224, 0.8)',
+                  borderColor: 'rgba(60, 80, 224, 1)',
+                  borderWidth: 2
+                }]
+              },
+              options: {
+                responsive: true,
+                plugins: {
+                  legend: {
+                    display: false
+                  }
+                }
+              }
+            });
+          }
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>

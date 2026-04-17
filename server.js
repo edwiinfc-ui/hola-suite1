@@ -3353,7 +3353,34 @@ app.get('/:filename', (req, res, next) => {
 
 function readKanbans() {
   try {
-    return fs.existsSync(KANBANS_FILE) ? JSON.parse(fs.readFileSync(KANBANS_FILE, 'utf8')) : [];
+    let kanbans = fs.existsSync(KANBANS_FILE) ? JSON.parse(fs.readFileSync(KANBANS_FILE, 'utf8')) : [];
+    if (!Array.isArray(kanbans)) kanbans = [];
+
+    // Seed: asegurar que exista un tablero base (ClickUp) para que el Kanban nunca quede vacío
+    if (kanbans.length === 0) {
+      const seeded = [
+        {
+          id: 'default',
+          name: 'Implementación (ClickUp)',
+          ownerId: 0,
+          sharedWith: [],
+          linkedToClickup: true,
+          columns: [
+            { id: "kickoff", title: "Kickoff", filter: { statusContains: "kickoff" } },
+            { id: "capacitacion", title: "Capacitación", filter: { statusContains: "capacitacion" } },
+            { id: "golive", title: "Go-Live", filter: { statusContains: "go-live" } },
+            { id: "activacion", title: "Activación", filter: { statusContains: "activacion" } }
+          ],
+          permissions: { view: ["admin", "consultant", "cs", "viewer"], edit: ["admin"] }
+        }
+      ];
+      try {
+        fs.writeFileSync(KANBANS_FILE, JSON.stringify(seeded, null, 2));
+      } catch (_e) {}
+      return seeded;
+    }
+
+    return kanbans;
   } catch(e) {
     return [];
   }

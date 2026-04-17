@@ -3374,6 +3374,8 @@ async function restoreSessionIfValid(){
     
     // 🚀 No sincronizar pesado al entrar. La sync se hace por timer (30 min) o manual.
     startAutoClickUpRefresh();
+    // Cargar snapshot actual del servidor (liviano) para no quedar en blanco.
+    syncClickUp({ silent: true, mode: 'background' }).catch(()=>{});
     
     connectToServerEvents();
     fetchUsersFromServer();
@@ -3459,6 +3461,8 @@ async function doLogin(){
         fetchClickUpTeamMembers(); 
         fetchServerGlobalConfig().catch(()=>{}); // 🆕 Cargar config global tras login
         startAutoClickUpRefresh();
+        // Cargar snapshot desde servidor sin forzar sync
+        syncClickUp({ silent: true, mode: 'background' }).catch(()=>{});
         hideLoading();
         toast('success', 'Sistema conectado ✓');
       }).catch(e => {

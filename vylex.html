@@ -4827,6 +4827,19 @@ function deriveChannelFlags(channels){
 
 function hydrateClients(data){
   return (data||[]).map(client=>{
+    // Normalizar statusType si viene vacío (ClickUp snapshot puede no traerlo)
+    const rawStatus = String(client.statusSheet || client.status || client.estado || '').toLowerCase();
+    let statusType = client.statusType;
+    if(!statusType){
+      if(rawStatus.includes('cancel') || rawStatus.includes('baja') || rawStatus.includes('❌')) statusType = 'cancelado';
+      else if(rawStatus.includes('activo') || rawStatus.includes('✅')) statusType = 'activo';
+      else if(rawStatus.includes('implement') || rawStatus.includes('⚙️') || rawStatus.includes('kickoff') || rawStatus.includes('capacit') || rawStatus.includes('go-live') || rawStatus.includes('golive')) statusType = 'impl';
+      else statusType = 'impl';
+    }
+
+    // Asegurar taskId de ClickUp (para Kanban/status/comments). En ClickUp el id suele ser el taskId.
+    const clickupTaskId = client.clickupTaskId || client.taskId || client.id;
+
     const override=APP.channelOverrides[client.id]||{};
     // Asegurar que client.canales es siempre un array
     let clientChannels = [];
@@ -4847,6 +4860,8 @@ function hydrateClients(data){
     const dataIncomplete=!mergedChannels.length || !logs.length;
     return {
       ...client,
+      statusType,
+      clickupTaskId,
       consultoresAsignados:collectAssignedConsultants(client.consultoresAsignados||[],client.rKickoff,client.rVer,client.rCap,client.rGoLive,client.rAct),
       sourceLogs,
       canales:mergedChannels,

@@ -1738,7 +1738,11 @@ tbody td{padding:10px 13px;font-size:12px;vertical-align:middle}
             <button class="btn-primary" onclick="testClickUp()"><i class="fa fa-plug"></i> <span data-i18n="common.test">Probar</span></button>
             <button class="btn-outline" onclick="syncClickUp()"><i class="fa fa-rotate"></i> <span data-i18n="action.sync">Sincronizar</span></button>
             <button class="btn-outline" onclick="showClickUpDiagnostics()"><i class="fa fa-stethoscope"></i> Diagnóstico</button>
+            <button class="btn-success" onclick="saveClickUpCredentials()" title="Guarda las credenciales para no perderlas al actualizar (requiere admin)">
+              <i class="fa fa-floppy-disk"></i> Guardar ClickUp
+            </button>
           </div>
+          <div id="clickupCredSavedHint" style="margin-top:10px;font-size:11px;color:var(--muted)"></div>
         </div>
         <div class="config-card">
           <div class="config-title"><i class="fa fa-message"></i> ¡Hola! / Vy-Lex API <span class="info-tip" data-tip="Conecta con la API de Vy-Lex Management Suite para ver conversaciones y activar el módulo OPA.">i</span></div>
@@ -5423,6 +5427,16 @@ function loadSavedData(){
   if(evalImplLink)evalImplLink.value=links.evalImpl;
   const adminControls=document.getElementById('formsAdminControls');
   if(adminControls) adminControls.style.display = (APP.currentUser?.role === 'admin') ? 'block' : 'none';
+
+  // Restaurar credenciales ClickUp guardadas localmente (si existen)
+  try{
+    const savedKey = localStorage.getItem('holaClickupApiKey') || '';
+    const savedList = localStorage.getItem('holaClickupListId') || '';
+    const apiEl = document.getElementById('cfgApiKey');
+    const listEl = document.getElementById('cfgListId');
+    if(listEl && savedList && !listEl.value) listEl.value = savedList;
+    if(apiEl && savedKey && !apiEl.value) apiEl.value = savedKey;
+  }catch{}
 }
 
 function loadLocalData(){
@@ -11185,10 +11199,15 @@ async function fetchServerGlobalConfig() {
   try {
     const json = await getJson('/api/config/global');
     if (json) {
-      if (json.clickupApiKey && json.clickupApiKey !== '********') {
-        CONFIG.API_KEY = json.clickupApiKey;
+      // Por seguridad, el servidor siempre enmascara la API Key.
+      // Si existe en el servidor, indicarlo para que no parezca "vacío".
+      if (json.hasClickupApiKey) {
         const el = document.getElementById('cfgApiKey');
-        if (el) el.value = json.clickupApiKey;
+        if (el && !el.value) {
+          el.value = '********';
+        }
+        const hint = document.getElementById('clickupCredSavedHint');
+        if (hint) hint.textContent = 'API Key guardada en el servidor ✓';
       }
       if (json.clickupListId) {
         CONFIG.LIST_ID = json.clickupListId;
@@ -11216,6 +11235,57 @@ async function fetchServerGlobalConfig() {
     }
   } catch (e) {
     console.warn('❌ Error al cargar configuración global:', e);
+  }
+}
+
+async function saveClickUpCredentials() {
+  try {
+    if (APP.currentUser?.role !== 'admin') {
+      toast('warning', 'Solo admin puede guardar credenciales en el servidor');
+      return;
+    }
+    const apiKeyRaw = String(document.getElementById('cfgApiKey')?.value || '').trim();
+    const listId = String(document.getElementById('cfgListId')?.value || '').trim();
+
+    const apiKey = apiKeyRaw === '********' ? '' : apiKeyRaw;
+
+    if (!listId) {
+      toast('warning', 'List ID requerido');
+      return;
+    }
+    if (!apiKey && !apiKeyRaw) {
+      toast('warning', 'API Key requerida');
+      return;
+    }
+
+    // Persistencia local (por si se usa modo sin backend)
+    try {
+      if (apiKey) localStorage.setItem('holaClickupApiKey', apiKey);
+      localStorage.setItem('holaClickupListId', listId);
+      localStorage.setItem('holaPrimarySource', 'clickup');
+    } catch {}
+
+    // Persistencia server-side (recomendado)
+    const resp = await fetch('/api/config/global', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({
+        ...(apiKey ? { clickupApiKey: apiKey } : {}),
+        clickupListId: listId
+      })
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(json?.error || `HTTP ${resp.status}`);
+
+    const hint = document.getElementById('clickupCredSavedHint');
+    if (hint) hint.textContent = 'Credenciales guardadas ✓';
+    // No mostrar el token en UI después de guardar
+    const el = document.getElementById('cfgApiKey');
+    if (el) el.value = '********';
+
+    toast('success', 'Credenciales ClickUp guardadas ✓');
+  } catch (e) {
+    toast('warning', e.message || 'No se pudo guardar');
   }
 }
 

@@ -7,26 +7,38 @@ const jwt        = require('jsonwebtoken');
 const fs         = require('fs');
 const path       = require('path');
 const NodeCache  = require('node-cache');
+const bcryptjs   = require('bcryptjs'); // 🔒 Nuevo: Hashing de contraseñas
+const rateLimit  = require('express-rate-limit'); // 🚦 Nuevo: Rate limiting
 const { getUserDashboardConfig, saveUserDashboardConfig } = require('./dashboardConfig');
-const { mapTasksToClients, computeTasksFingerprint, buscarFechaConcluidoFromDetails } = require('./clickupMapper');
+const { mapTasksToClients, computeTasksFingerprint, buscarFechaConcluidoFromDetails, extractAllCustomFieldsRaw, findCustomField: findCustomFieldMapper, getCampo: getCampoMapper } = require('./clickupMapper');
 const { importSalesFromSheet, syncSalesWithClients } = require('./salesImporter');
+const { retryWithBackoff, SmartCache, validateRequest, ChangesQueue } = require('./phase_2_helpers'); // 🆕 Fase 2 helpers
 require('dotenv').config();
 
 const app   = express();
 const PORT  = process.env.PORT || 3000;
-const cache = new NodeCache({ stdTTL: parseInt(process.env.CACHE_TTL) || 3600 });
+const cache = new SmartCache(parseInt(process.env.CACHE_TTL) || 3600); // 🆕 SmartCache con invalidación inteligente
 const STATIC_ROOT = __dirname;
 const MAIN_HTML = path.join(STATIC_ROOT, 'vylex.html');
-const FORM_SUBMISSIONS_FILE = path.join(STATIC_ROOT, 'form_submissions.json');
-const REQUESTS_FILE = path.join(STATIC_ROOT, 'requests.json');
+const DATA_DIR  = path.join(STATIC_ROOT, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+const FORM_SUBMISSIONS_FILE = path.join(DATA_DIR, 'form_submissions.json');
+const FORMS_DEFINITIONS_FILE = path.join(DATA_DIR, 'forms_definitions.json');
+const REQUESTS_FILE = path.join(DATA_DIR, 'requests.json');
+const CLIENTES_FILE = path.join(DATA_DIR, 'clientes.json');
+const LOCAL_OVERRIDES_FILE = path.join(DATA_DIR, 'local_overrides.json');
+const SALES_CONFIG_FILE = path.join(DATA_DIR, 'sales_config.json');
+const LOGS_FILE = path.join(DATA_DIR, 'audit_logs.json');
+const KANBANS_FILE = path.join(DATA_DIR, 'kanbans.json');
 
 const PUBLIC_FILES = new Set([
   'vylex.html',
+  'vylex-modern.html',
   'charts.js',
   'holasuite.html',
   'holasuitedashnueva.html',
-  'dashnuevaholasuite.html',
-  'vylex.html'
+  'dashnuevaholasuite.html'
 ]);
 let cacheMeta = {
   lastSyncAt: null,
@@ -34,8 +46,55 @@ let cacheMeta = {
   taskCount: 0
 };
 
+// ================================================================
+// SYNC MANAGER (ClickUp / Sheets / etc.)
+// ================================================================
+const CLICKUP_SYNC_INTERVAL_MS = 30 * 60 * 1000; // 30 minutos
+let clickupSync = {
+  running: false,
+  currentPromise: null,
+  lastStartedAt: null,
+  lastFinishedAt: null,
+  lastSuccessAt: null,
+  lastError: null,
+  lastReason: null,
+  lastStats: null
+};
+
 app.use(express.json());
 app.use(cors());
+
+// ================================================================
+// SECURITY HEADERS
+// ================================================================
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// 🚦 RATE LIMITING - Nuevo
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // 5 intentos por IP
+  message: { error: 'Demasiados intentos de login. Intenta en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 100, // 100 requests por minuto
+  message: { error: 'Demasiadas solicitudes. Intenta más tarde.' },
+  skip: (req) => req.user && req.user.role === 'admin', // Admin sin límite
+  standardHeaders: true,
+  legacyHeaders: false
+});
+
+app.use('/api/', apiLimiter);
+
 app.use('/css', (_req, res, next) => {
   res.setHeader('Cache-Control', 'no-store');
   next();
@@ -48,12 +107,19 @@ app.use('/js', (_req, res, next) => {
 // ================================================================
 // AUDIT LOG SYSTEM
 // ================================================================
-const LOGS_FILE = path.join(STATIC_ROOT, 'audit_logs.json');
 let auditSseClients = []; // SSE para auditoría (opcional)
 
 function writeLog(user, action, details) {
   try {
-    const logs = fs.existsSync(LOGS_FILE) ? JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8')) : [];
+    // Leer solo el archivo si existe y tiene menos de 2MB; sino truncar
+    let logs = [];
+    if (fs.existsSync(LOGS_FILE)) {
+      const stat = fs.statSync(LOGS_FILE);
+      if (stat.size < 2 * 1024 * 1024) {
+        try { logs = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8')); } catch (_e) { logs = []; }
+      }
+    }
+    if (!Array.isArray(logs)) logs = [];
     const newLog = {
       id: Date.now(),
       timestamp: new Date().toISOString(),
@@ -63,8 +129,9 @@ function writeLog(user, action, details) {
       details
     };
     logs.unshift(newLog);
-    fs.writeFileSync(LOGS_FILE, JSON.stringify(logs.slice(0, 500), null, 2));
-    
+    // Mantener solo los últimos 1000 registros para evitar crecimiento ilimitado
+    fs.writeFileSync(LOGS_FILE, JSON.stringify(logs.slice(0, 1000), null, 2));
+
     // Broadcast via SSE
     auditSseClients.forEach(c => {
       try {
@@ -98,8 +165,12 @@ const CONFIG = {
   CLICKUP_LIST_ID  : (process.env.CLICKUP_LIST_ID || '').trim(),
   JWT_SECRET       : (process.env.JWT_SECRET || 'tu_jwt_secret_super_seguro_aqui').trim(),
   DIAS_META        : { kickoff:3, verificacion:2, instalacion:5, capacitacion:7, activacion:2, total:20 },
-  TAREAS_IGNORAR   : ['configurar whatsapp','configurar telefonia','configurar instagram',
-                      'configurar messenger','configurar webchat','teste','crear vm'],
+  TAREAS_IGNORAR   : ['configurar whatsapp','configuracion whatsapp','configuracion de whatsapp',
+                      'configurar telefonia','configuracion telefonia','configuracion de telefonia',
+                      'configurar instagram','configuracion instagram','configuracion de instagram',
+                      'configurar messenger','configuracion messenger','configuracion de messenger',
+                      'configurar webchat','configuracion webchat','configuracion de webchat',
+                      'prueba','test','teste','demo','crear vm'],
   ESTADOS_IGNORAR  : ['revisión comercial','revision comercial'],
   PAISES: {
     'argentina':'Argentina','colombia':'Colombia','colômbia':'Colombia',
@@ -127,10 +198,10 @@ const CONFIG = {
 
 const ESTADOS_IMPL = [
   'listo para kickoff','en kickoff','en onboarding','listo para onboarding',
-  'en análisis meta','en analisis meta',
+  'en análisis meta','en analisis meta','analisis de meta','en analisis de meta',
   'listo para instalación','listo para instalacion','en instalación','en instalacion',
-  'en capacitación','en capacitacion',
-  'go-live','go live','activación canales','activacion canales',
+  'en capacitación','en capacitacion','capacitacion',
+  'go-live','go live','activación canales','activacion canales','activación','activacion',
   'concluído','concluido','closed','cerrado','cancelado','en espera wispro'
 ];
 
@@ -175,10 +246,8 @@ function writeUsers(users) {
 }
 
 // ================================================================
-// CONFIGURACIÓN GLOBAL (ClickUp, API, etc)
+// CONFIGURACIÓN Y PERSISTENCIA
 // ================================================================
-const CONFIG_FILE = path.join(STATIC_ROOT, 'global_config.json');
-const SALES_CONFIG_FILE = path.join(STATIC_ROOT, 'sales_config.json');
 let sseClients = []; // Para sincronización en tiempo real
 
 function readGlobalConfig() {
@@ -194,15 +263,43 @@ function writeGlobalConfig(config) {
 }
 
 function readSalesConfig() {
-  try {
-    if (!fs.existsSync(SALES_CONFIG_FILE)) return { sellers: [], salesTargets: {}, monthlyGoals: {}, vendorMatches: {} };
-    return JSON.parse(fs.readFileSync(SALES_CONFIG_FILE, 'utf8'));
-  } catch (e) { return { sellers: [], salesTargets: {}, monthlyGoals: {}, vendorMatches: {} }; }
+  try { return fs.existsSync(SALES_CONFIG_FILE) ? JSON.parse(fs.readFileSync(SALES_CONFIG_FILE, 'utf8')) : {}; }
+  catch(e) { return {}; }
 }
-function writeSalesConfig(config) {
-  fs.writeFileSync(SALES_CONFIG_FILE, JSON.stringify(config, null, 2));
+
+function writeSalesConfig(data) {
+  fs.writeFileSync(SALES_CONFIG_FILE, JSON.stringify(data, null, 2));
   // Notificar a todos los clientes conectados
-  broadcastEvent('salesConfigUpdated', config);
+  broadcastEvent('salesConfigUpdated', data);
+}
+
+function readLocalOverrides() {
+  try { return fs.existsSync(LOCAL_OVERRIDES_FILE) ? JSON.parse(fs.readFileSync(LOCAL_OVERRIDES_FILE, 'utf8')) : {}; }
+  catch(e) { return {}; }
+}
+
+function writeLocalOverrides(data) {
+  fs.writeFileSync(LOCAL_OVERRIDES_FILE, JSON.stringify(data, null, 2));
+}
+
+/**
+ * Fusionar datos de ClickUp con sobreescrituras locales
+ */
+function mergeOverrides(clients) {
+  if (!Array.isArray(clients)) return clients;
+  const overrides = readLocalOverrides();
+  
+  return clients.map(client => {
+    const ov = overrides[client.id];
+    if (!ov) return client;
+    
+    // Aplicar sobreescrituras (prioridad local)
+    return {
+      ...client,
+      ...ov,
+      _hasOverrides: true
+    };
+  });
 }
 
 async function fetchGoogleSheetValues(sheetId, sheetName, apiKey) {
@@ -455,6 +552,10 @@ function sendPublicFile(res, filename) {
   if (!PUBLIC_FILES.has(filename)) {
     return res.status(404).json({ error:'Archivo no disponible' });
   }
+  // Prevent stale HTML/CSS/JS when iterating quickly on the UI.
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   return res.sendFile(path.join(STATIC_ROOT, filename));
 }
 
@@ -493,6 +594,96 @@ function readFormSubmissions() {
 
 function writeFormSubmissions(items) {
   fs.writeFileSync(FORM_SUBMISSIONS_FILE, JSON.stringify(items, null, 2));
+}
+
+function defaultFormsDefinitions() {
+  return [
+    {
+      id: 'upgrade',
+      name: 'Upgrade / Cross-sell',
+      public: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      fields: [
+        { id: 'clientName', label: 'Cliente', type: 'text', required: true },
+        { id: 'contactName', label: 'Contacto / solicitante', type: 'text', required: false },
+        { id: 'email', label: 'Email', type: 'email', required: false },
+        { id: 'requestedPlan', label: 'Plan / producto solicitado', type: 'text', required: false },
+        { id: 'value', label: 'Valor estimado USD', type: 'number', required: false },
+        { id: 'details', label: 'Detalles', type: 'textarea', required: false }
+      ]
+    },
+    {
+      id: 'churn-risk',
+      name: 'Riesgo de baja',
+      public: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      fields: [
+        { id: 'clientName', label: 'Cliente', type: 'text', required: true },
+        { id: 'contactName', label: 'Contacto / solicitante', type: 'text', required: false },
+        { id: 'email', label: 'Email', type: 'email', required: false },
+        { id: 'urgency', label: 'Urgencia', type: 'select', required: false, options: ['alta', 'media', 'baja'] },
+        { id: 'reason', label: 'Motivo de riesgo', type: 'text', required: false },
+        { id: 'details', label: 'Detalles', type: 'textarea', required: false }
+      ]
+    },
+    {
+      id: 'eval-system',
+      name: 'Evaluación del Sistema',
+      public: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      fields: [
+        { id: 'name', label: 'Nombre', type: 'text', required: false },
+        { id: 'company', label: 'Empresa', type: 'text', required: false },
+        { id: 'role', label: 'Rol / área', type: 'text', required: false },
+        { id: 'rating', label: 'Puntuación (1-5)', type: 'rating', required: true, min: 1, max: 5 },
+        { id: 'best', label: '¿Qué fue lo mejor?', type: 'textarea', required: false },
+        { id: 'improve', label: '¿Qué mejorarías?', type: 'textarea', required: false }
+      ]
+    },
+    {
+      id: 'eval-implementation',
+      name: 'Evaluación del Proceso de Implementación',
+      public: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      fields: [
+        { id: 'clientName', label: 'Cliente', type: 'text', required: false },
+        { id: 'name', label: 'Nombre', type: 'text', required: false },
+        { id: 'rating', label: 'Puntuación (1-5)', type: 'rating', required: true, min: 1, max: 5 },
+        { id: 'timeline', label: '¿Cumplimos tiempos?', type: 'select', required: false, options: ['sí', 'parcial', 'no'] },
+        { id: 'communication', label: 'Comunicación', type: 'select', required: false, options: ['excelente', 'buena', 'regular', 'mala'] },
+        { id: 'comments', label: 'Comentarios', type: 'textarea', required: false }
+      ]
+    }
+  ];
+}
+
+function readFormsDefinitions() {
+  try {
+    if (!fs.existsSync(FORMS_DEFINITIONS_FILE)) {
+      const defaults = defaultFormsDefinitions();
+      fs.writeFileSync(FORMS_DEFINITIONS_FILE, JSON.stringify(defaults, null, 2));
+      return defaults;
+    }
+    const parsed = JSON.parse(fs.readFileSync(FORMS_DEFINITIONS_FILE, 'utf8'));
+    if (!Array.isArray(parsed)) return defaultFormsDefinitions();
+    // Auto-migrate: asegurar defaults presentes
+    const ids = new Set(parsed.map(f => f?.id).filter(Boolean));
+    const merged = [...parsed];
+    defaultFormsDefinitions().forEach(df => {
+      if (!ids.has(df.id)) merged.push(df);
+    });
+    return merged;
+  } catch (_e) {
+    return defaultFormsDefinitions();
+  }
+}
+
+function writeFormsDefinitions(forms) {
+  fs.writeFileSync(FORMS_DEFINITIONS_FILE, JSON.stringify(forms, null, 2));
 }
 
 function readRequests() {
@@ -570,7 +761,9 @@ function normCons(n) {
     'alejandro jose zambrano':'Alejandro Zambrano','alejandro zambrano':'Alejandro Zambrano',
     'alejandro':'Alejandro Zambrano','zambrano':'Alejandro Zambrano',
     'mariane aparecida telo':'Mariane Teló','mariane telo':'Mariane Teló',
-    'mariane':'Mariane Teló','telo':'Mariane Teló','mari telo':'Mariane Teló'
+    'mariane':'Mariane Teló','telo':'Mariane Teló','mari telo':'Mariane Teló',
+    'blitzangel leon': 'Blitzangel Leon', 'blitzangel': 'Blitzangel Leon',
+    'bruno gabriel rodrigues': 'Bruno Gabriel Rodrigues', 'bruno gabriel': 'Bruno Gabriel Rodrigues', 'bruno': 'Bruno Gabriel Rodrigues'
   };
   if (map[l]) return map[l];
   for (const [k,v] of Object.entries(map)) {
@@ -601,271 +794,31 @@ function getCampo(cf, nom, tipo) {
   } catch(e) { return tipo === 'number' ? 0 : ''; }
 }
 
-function getPais(cf) {
-  const f = findCustomField(cf, ['país', 'pais']);
-  if (!f || (f.value === null || f.value === undefined)) return '';
-  try {
-    if (f.type_config?.options) {
-      const o = f.type_config.options.find(x => x.orderindex === parseInt(f.value) || x.id === f.value);
-      if (o?.name) {
-        const pn = normalizeText(o.name);
-        return CONFIG.PAISES[pn] || o.name;
-      }
-    }
-    if (typeof f.value === 'string') {
-      const pn = normalizeText(f.value);
-      return CONFIG.PAISES[pn] || f.value.trim();
-    }
-  } catch(e) {}
-  return '';
-}
-
-function getPlan(cf) {
-  const f = findCustomField(cf, ['plan']);
-  if (!f || (f.value === null || f.value === undefined)) return '';
-  try {
-    if (f.type_config?.options) {
-      const o = f.type_config.options.find(x => x.orderindex === parseInt(f.value) || x.id === f.value);
-      if (o) return (o.name || o.label || '').trim();
-    }
-    if (typeof f.value === 'string') return f.value.trim();
-  } catch(e) {}
-  return '';
-}
-
-function diasHab(ini, fin, pais) {
-  if (!ini || !fin) return 0;
-  let d = 0;
-  let a = new Date(ini);
-  const f = new Date(fin);
-  const fer = CONFIG.FERIADOS[pais] || [];
-  while (a <= f) {
-    const ds = a.getDay();
-    const mm = String(a.getMonth()+1).padStart(2,'0');
-    const dd = String(a.getDate()).padStart(2,'0');
-    const md = mm + '-' + dd;
-    if (ds !== 0 && ds !== 6 && !fer.includes(md)) d++;
-    a.setDate(a.getDate()+1);
-  }
-  return d;
-}
-
+// Helpers de filtrado global
 function debeIgnorar(t) {
-  const n = normalizeText(t.name);
-  if (CONFIG.TAREAS_IGNORAR.some(x => n.includes(x))) return true;
-  const s = normalizeText(t.status.status);
-  if (CONFIG.ESTADOS_IGNORAR.includes(s)) return true;
+  if (!t || !t.nombre && !t.name) return true;
+  const n = normalizeText(t.nombre || t.name);
+  if (CONFIG.TAREAS_IGNORAR.some(x => n.includes(normalizeText(x)))) return true;
+  
+  const status = t.estado || t.status?.status || '';
+  const s = normalizeText(status);
+  if (CONFIG.ESTADOS_IGNORAR.some(x => normalizeText(x) === s)) return true;
+  
   return false;
 }
 
 function esValido(t) {
   if (debeIgnorar(t)) return false;
-  const s = normalizeText(t.status.status);
-  return ESTADOS_IMPL.some(e => s.includes(normalizeText(e)));
+  const status = t.estado || t.status?.status || '';
+  const s = normalizeText(status);
+  return (CONFIG.ESTADOS_IMPL || []).some(e => s.includes(normalizeText(e)));
 }
 
-function formatMes(fecha) {
-  if (!fecha) return 'N/A';
-  const f = fecha instanceof Date ? fecha : new Date(fecha);
-  if (isNaN(f.getTime())) return 'N/A';
-  return MESES[f.getMonth()] + ' ' + f.getFullYear();
-}
-
-function fmtFecha(ms) {
-  if (!ms) return '';
-  const f = new Date(ms);
-  return f.toLocaleDateString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric' });
-}
-
-// ================================================================
-// LÓGICA: PROCESAR UNA TAREA DE CLICKUP → OBJETO NORMALIZADO
-// ================================================================
-function procesarTarea(t) {
-  const cf  = t.custom_fields || [];
-  const now = new Date();
-  const creado    = new Date(parseInt(t.date_created));
-  const actualizado = new Date(parseInt(t.date_updated));
-  const cerrado   = t.date_closed ? new Date(parseInt(t.date_closed)) : null;
-  const eLower    = normalizeText(t.status.status);
-
-  /* ---- ESTADO ---- */
-  const esConcluido = eLower.includes('conclu') || eLower === 'closed' || eLower === 'cerrado';
-  const esCancelado = eLower === 'cancelado';
-  const enProceso   = !esConcluido && !esCancelado;
-
-  /* ---- FECHAS ---- */
-  let fInicioMs = getCampo(cf,'Fecha Inicio Kickoff','date') ||
-                  getCampo(cf,'Fecha Inicio Onboarding','date');
-  const fInicio = fInicioMs ? new Date(fInicioMs) : creado;
-  const fActiv  = esConcluido ? (cerrado || actualizado) : null;
-  const fCanc   = esCancelado ? (cerrado || actualizado) : null;
-
-  /* ---- PAIS / PLAN ---- */
-  const pais = getPais(cf) || 'No definido';
-  const plan = getPlan(cf) || '';
-
-  /* ---- DÍAS ---- */
-  let dImpl = 0;
-  if (esConcluido && fActiv) dImpl = diasHab(fInicio, fActiv, pais);
-  else if (esCancelado && fCanc) dImpl = diasHab(fInicio, fCanc, pais);
-  else dImpl = diasHab(fInicio, now, pais);
-
-  const dUso = (esConcluido && fActiv)
-    ? Math.floor((now - fActiv) / 86400000) : 0;
-  const dSinMov = !esConcluido && !esCancelado
-    ? Math.floor((now - actualizado) / 86400000) : 0;
-
-  /* ---- STATUS ---- */
-  let status = enProceso ? 'En Implementación' : esConcluido ? 'Activo' : 'Cancelado';
-
-  /* ---- ALERTA ---- */
-  let alerta = '';
-  if (enProceso) {
-    if (dImpl > CONFIG.DIAS_META.total) alerta = 'CRITICA';
-    else if (dSinMov > 7)              alerta = 'SIN_MOV';
-  }
-
-  /* ---- CANALES ---- */
-  const canField = findCustomField(cf, ['canales contratados']);
-  const canales  = [];
-  if (canField?.value && Array.isArray(canField.value)) {
-    const opts = canField.type_config?.options || [];
-    canField.value.forEach(item => {
-      let label = '';
-      if (typeof item === 'string') {
-        const o = opts.find(x => x.id === item);
-        label = o ? (o.label || o.name || '') : item;
-      } else if (typeof item === 'object') {
-        label = item.label || item.name || '';
-      }
-      if (label.trim()) canales.push(label.toLowerCase().trim());
-    });
-  }
-
-  const wa  = canales.some(c => c.includes('whatsapp'))              ? 'SÍ' : 'NO';
-  const ig  = canales.some(c => c.includes('instagram'))             ? 'SÍ' : 'NO';
-  const wc  = canales.some(c => c.includes('webchat'))               ? 'SÍ' : 'NO';
-  const pbx = canales.some(c => c.includes('pbx')||c.includes('telefon')) ? 'SÍ' : 'NO';
-  const tg  = canales.some(c => c.includes('telegram'))              ? 'SÍ' : 'NO';
-  const msg = canales.some(c => c.includes('messenger'))             ? 'SÍ' : 'NO';
-
-  /* ---- RESPONSABLES ---- */
-  function buscarResp(terminos) {
-    for (const t2 of terminos) {
-      const campo = findCustomField(cf, [t2]);
-      if (!campo?.value) continue;
-      if (Array.isArray(campo.value) && campo.value.length > 0) {
-        const n = campo.value[0]?.username || campo.value[0]?.name || '';
-        const norm = normCons(n);
-        if (norm) return norm;
-        if (n.length > 2) return n;
-      }
-      if (typeof campo.value === 'string' && campo.value.trim().length > 2) {
-        return normCons(campo.value) || campo.value.trim();
-      }
-    }
-    return '';
-  }
-
-  const rKickoff = buscarResp(['responsable por el kickoff','responsable kickoff','responsable onboarding']);
-  const rVer     = buscarResp(['responsable por el análisis','responsable verificaci']);
-  const rCap     = buscarResp(['responsable por capacitación','responsable capacit']);
-  const rGoLive  = buscarResp(['responsable por el go-live','responsable go-live','responsable go live']);
-  const rAct     = buscarResp(['responsable por la activación','responsable activaci']);
-  const rVenta   = buscarResp(['responsable comercial','responsable venta','vendedor','responsable de venta']);
-
-  /* ---- IP / DOMINIO ---- */
-  const ip      = getCampo(cf,'IP Hola','text');
-  const dominio = getCampo(cf,'Domínio','text') || getCampo(cf,'Dominio','text');
-  let linkHola  = '';
-  if (ip) {
-    const esIP = /^\d+\.\d+\.\d+\.\d+$/.test(ip);
-    linkHola = esIP ? 'https://'+ip : (ip.startsWith('http') ? ip : 'https://'+ip);
-  } else if (dominio) {
-    linkHola = dominio.startsWith('http') ? dominio : 'https://'+dominio;
-  }
-
-  /* ---- TAGS ---- */
-  const tags    = (t.tags||[]).map(x => normalizeText(x.name));
-  const tagsStr = tags.join(',');
-  const tipoF   = findCustomField(cf, ['tipo de implementación', 'tipo de implementacion']);
-  const tipo    = (tipoF?.value?.toString() === '1' || tagsStr.includes('upgrade')) ? 'Upgrade' : 'Implementación';
-
-  /* ---- CAPACITACIONES ---- */
-  const cantCap = getCampo(cf,'cantidad de capacitaciones','number') || 0;
-  const hCap    = getCampo(cf,'horas de capacitación','number') ||
-                  getCampo(cf,'cantidad de horas','number') || 0;
-
-  /* ---- MOTIVO ---- */
-  const motivo  = getCampo(cf,'Motivos de baja','dropdown') || (esCancelado ? 'No especificado' : '');
-
-  /* ---- EMAIL / TEL ---- */
-  const email   = getCampo(cf,'E-mail','email') || getCampo(cf,'email','text');
-  const tel     = getCampo(cf,'Número para contacto','text');
-
-  /* ---- MÓDULOS ---- */
-  const modCancelados  = getCampo(cf,'módulos cancelados','text') || getCampo(cf,'módulo cancelado','text') || '';
-  const modAdicionados = getCampo(cf,'módulos adicionados','text') || getCampo(cf,'upsell','text') || '';
-
-  return {
-    id            : t.id,
-    nombre        : t.name,
-    url           : t.url,
-    estado        : t.status.status,
-    status,
-    statusType    : esConcluido ? 'activo' : esCancelado ? 'cancelado' : 'impl',
-    alerta,
-    tipo,
-    pais,
-    plan,
-    email,
-    telefono      : tel,
-    ip,
-    dominio,
-    linkHola,
-    fInicio       : fInicio.getTime(),
-    fInicioFmt    : fmtFecha(fInicio.getTime()),
-    fActivacion   : fActiv ? fActiv.getTime() : null,
-    fActivacionFmt: fActiv ? fmtFecha(fActiv.getTime()) : '',
-    fCancelacion  : fCanc  ? fCanc.getTime()  : null,
-    fCancelacionFmt: fCanc ? fmtFecha(fCanc.getTime()) : '',
-    fActualizado  : actualizado.getTime(),
-    dImpl,
-    mImpl         : +(dImpl/30).toFixed(1),
-    dUso,
-    mUso          : +(dUso/30).toFixed(1),
-    dSinMov,
-    mesInicio     : formatMes(fInicio),
-    mesFin        : fActiv  ? formatMes(fActiv)  : (fCanc ? formatMes(fCanc) : ''),
-    mesAct        : fActiv  ? formatMes(fActiv)  : '',
-    rKickoff, rVer, rCap, rGoLive, rAct, rVenta,
-    cantCap, hCap, motivo,
-    modCancelados, modAdicionados,
-    canales: { wa, ig, wc, pbx, tg, msg },
-    tags          : tagsStr,
-    valorVenta    : getCampo(cf, 'Valor Venta', 'number') || getCampo(cf, 'monto', 'number') || 0,
-    vendedor      : rVenta || '',
-    sinReq        : tagsStr.includes('sin requisitos')      ? 'SÍ' : 'NO',
-    pausada       : tagsStr.includes('pausada')             ? 'SÍ' : 'NO',
-    espCli        : tagsStr.includes('esperando cliente')   ? 'SÍ' : 'NO',
-    moro          : tagsStr.includes('morosidad')           ? 'SÍ' : 'NO',
-    upgImpl       : (tagsStr.includes('upgrade') || tipo === 'Upgrade') && !esConcluido ? 'SÍ' : 'NO'
-  };
-}
+// Funciones de mapeo movidas a clickupMapper.js
 
 // ================================================================
 // CLICKUP: OBTENER TAREAS (con caché)
 // ================================================================
-
-// Acceso al mapa de campos personalizados desde global_config.json
-// Prioridad: global_config > process.env > objeto vacío
-function getClickUpCustomFieldMap() {
-  const cfg = readGlobalConfig();
-  return (cfg.clickupCustomFieldMap && typeof cfg.clickupCustomFieldMap === 'object')
-    ? cfg.clickupCustomFieldMap
-    : {};
-}
-
 
 
 async function obtenerTareasClickUp() {
@@ -877,15 +830,20 @@ async function obtenerTareasClickUp() {
     return cached;
   }
 
-  // Intentar obtener de ClickUp
+  // Intentar obtener de ClickUp con retry logic 🔄
   try {
     const apiKey = getClickUpApiKey();
     const listId = getClickUpListId();
     
-    // Usar la función optimizada que ya entrega datos crudos
-    const rawTasks = await obtenerTareasClickUpRaw({ apiKey, listId });
+    // 🆕 Usar retryWithBackoff para resistir rate limits
+    const rawTasks = await retryWithBackoff(
+      () => obtenerTareasClickUpRaw({ apiKey, listId }),
+      3, // maxRetries
+      1000, // initialDelayMs
+      60000 // maxDelayMs
+    );
     
-    cache.set(CACHE_KEY, rawTasks, 1800); // 30 min cache
+    cache.set(CACHE_KEY, rawTasks); // 🆕 SmartCache auto-maneja TTL
     cacheMeta = {
       lastSyncAt: new Date().toISOString(),
       source: 'clickup',
@@ -917,33 +875,130 @@ async function obtenerTareasClickUp() {
   }
 }
 
+async function computeProcessedClientsFromTasks(tareas) {
+  if (!Array.isArray(tareas)) return [];
+
+  // Si ya viene procesado (desde clientes.json), no remapear.
+  const looksRaw = tareas.length > 0 && (tareas[0].custom_fields || tareas[0].status?.status);
+  if (!looksRaw) return tareas;
+
+  const apiKey = getClickUpApiKey();
+  const fetcher = async (id) => {
+    try {
+      const resDetail = await fetch(`https://api.clickup.com/api/v2/task/${id}`, {
+        headers: { Authorization: apiKey },
+        timeout: 30000
+      });
+      if (!resDetail.ok) return null;
+      return await resDetail.json();
+    } catch (_e) {
+      return null;
+    }
+  };
+
+  const procesadas = await mapTasksToClients(tareas, CONFIG, {
+    fetchTaskDetails: fetcher
+  });
+
+  return procesadas;
+}
+
+async function runClickUpSync({ reason = 'manual', force = false } = {}) {
+  if (clickupSync.running && clickupSync.currentPromise) return clickupSync.currentPromise;
+
+  const now = Date.now();
+  if (!force && clickupSync.lastStartedAt) {
+    const elapsed = now - new Date(clickupSync.lastStartedAt).getTime();
+    // Anti-spam: evitar iniciar syncs seguidos por múltiples clicks
+    if (elapsed >= 0 && elapsed < 20 * 1000 && clickupSync.currentPromise) {
+      return clickupSync.currentPromise;
+    }
+  }
+
+  clickupSync.running = true;
+  clickupSync.lastStartedAt = new Date().toISOString();
+  clickupSync.lastReason = reason;
+  clickupSync.lastError = null;
+
+  clickupSync.currentPromise = (async () => {
+    const startedAt = Date.now();
+    try {
+      const tareasRaw = await obtenerTareasClickUp();
+      let procesadas = await computeProcessedClientsFromTasks(tareasRaw);
+
+      const beforeFilter = procesadas.length;
+      procesadas = procesadas.filter(t => !debeIgnorar(t));
+      const ignored = beforeFilter - procesadas.length;
+
+      const dashboard = buildDashboard(procesadas);
+
+      cache.set('clickup_clients_processed', procesadas, CLICKUP_SYNC_INTERVAL_MS / 1000);
+      cache.set('clickup_dashboard_snapshot', dashboard, CLICKUP_SYNC_INTERVAL_MS / 1000);
+
+      const payload = {
+        updatedAt: new Date().toISOString(),
+        clientes: procesadas,
+        meta: {
+          reason,
+          ignored,
+          total: procesadas.length,
+          tookMs: Date.now() - startedAt
+        }
+      };
+      fs.writeFileSync(CLIENTES_FILE, JSON.stringify(payload, null, 2));
+      fs.writeFileSync(
+        path.join(DATA_DIR, 'sync_complete.json'),
+        JSON.stringify({ total: procesadas.length, timestamp: payload.updatedAt, reason }, null, 2)
+      );
+
+      clickupSync.lastSuccessAt = payload.updatedAt;
+      clickupSync.lastStats = payload.meta;
+      return { ok: true, meta: payload.meta };
+    } catch (e) {
+      clickupSync.lastError = e.message;
+      return { ok: false, error: e.message };
+    } finally {
+      clickupSync.running = false;
+      clickupSync.lastFinishedAt = new Date().toISOString();
+      clickupSync.currentPromise = null;
+    }
+  })();
+
+  return clickupSync.currentPromise;
+}
+
 function invalidarCache() {
-  cache.del('clickup_tasks');
+  // 🆕 SmartCache invalidaría por patrón, no por clave
+  cache.invalidatePattern('clickup_tasks.*');
 }
 
 // ================================================================
 // CONSTRUIR DASHBOARD ANALYTICS
 // ================================================================
 function buildDashboard(tasks) {
-  const activos    = tasks.filter(t => t.status === 'Activo');
-  const enProceso  = tasks.filter(t => t.status === 'En Implementación');
-  const cancelados = tasks.filter(t => t.status === 'Cancelado');
+  const activos    = tasks.filter(t => t.status === 'Activo' || (t.status && t.status.includes('Activo')));
+  const enProceso  = tasks.filter(t => t.status === 'En Implementación' || (t.status && t.status.includes('Implementación')));
+  const cancelados = tasks.filter(t => t.status === 'Cancelado' || (t.status && t.status.includes('Cancelado')));
 
   /* ---- KPIs ---- */
   const total        = tasks.length;
   const tasaExito    = total > 0 ? +((activos.length/total)*100).toFixed(1) : 0;
   const tasaCancel   = total > 0 ? +((cancelados.length/total)*100).toFixed(1) : 0;
+  const tasaUpgrade  = total > 0 ? +((tasks.filter(t => t.tipo === 'Upgrade').length/total)*100).toFixed(1) : 0;
   const promDiasImpl = activos.length > 0
-    ? +(activos.reduce((s,t)=>s+t.dImpl,0)/activos.length).toFixed(1) : 0;
+    ? +(activos.reduce((s,t)=>s+(t.dImpl||0),0)/activos.length).toFixed(1) : 0;
+  const promDiasEnProceso = enProceso.length > 0
+    ? +(enProceso.reduce((s,t)=>s+(t.dImpl||0),0)/enProceso.length).toFixed(1) : 0;
 
-  /* ---- CANALES ACTIVOS ---- */
+  /* ---- CANALES (sobre activos + en proceso) ---- */
+  const allActive = [...activos, ...enProceso];
   const canales = {
-    WhatsApp  : activos.filter(t=>t.canales.wa==='SÍ').length,
-    Instagram : activos.filter(t=>t.canales.ig==='SÍ').length,
-    WebChat   : activos.filter(t=>t.canales.wc==='SÍ').length,
-    PBX       : activos.filter(t=>t.canales.pbx==='SÍ').length,
-    Telegram  : activos.filter(t=>t.canales.tg==='SÍ').length,
-    Messenger : activos.filter(t=>t.canales.msg==='SÍ').length
+    WhatsApp  : allActive.filter(t=>t.canales?.wa==='SÍ').length,
+    Instagram : allActive.filter(t=>t.canales?.ig==='SÍ').length,
+    WebChat   : allActive.filter(t=>t.canales?.wc==='SÍ').length,
+    PBX       : allActive.filter(t=>t.canales?.pbx==='SÍ').length,
+    Telegram  : allActive.filter(t=>t.canales?.tg==='SÍ').length,
+    Messenger : allActive.filter(t=>t.canales?.msg==='SÍ').length
   };
 
   /* ---- POR PAÍS ---- */
@@ -952,28 +1007,102 @@ function buildDashboard(tasks) {
     const p = t.pais || 'No definido';
     if (!porPais[p]) porPais[p] = { total:0, activos:0, enProceso:0, cancelados:0 };
     porPais[p].total++;
-    if (t.status==='Activo')            porPais[p].activos++;
-    if (t.status==='En Implementación') porPais[p].enProceso++;
-    if (t.status==='Cancelado')         porPais[p].cancelados++;
+    if (t.status==='Activo' || (t.status && t.status.includes('Activo')))           porPais[p].activos++;
+    if (t.status==='En Implementación' || (t.status && t.status.includes('Implementación'))) porPais[p].enProceso++;
+    if (t.status==='Cancelado' || (t.status && t.status.includes('Cancelado')))     porPais[p].cancelados++;
   });
 
-  /* ---- POR CONSULTOR ---- */
+  /* ---- POR PLAN ---- */
+  const porPlan = {};
+  tasks.forEach(t => {
+    const p = t.plan || 'Sin plan';
+    if (!porPlan[p]) porPlan[p] = { total:0, activos:0, enProceso:0, cancelados:0 };
+    porPlan[p].total++;
+    if (t.status==='Activo' || (t.status && t.status.includes('Activo')))           porPlan[p].activos++;
+    if (t.status==='En Implementación' || (t.status && t.status.includes('Implementación'))) porPlan[p].enProceso++;
+    if (t.status==='Cancelado' || (t.status && t.status.includes('Cancelado')))     porPlan[p].cancelados++;
+  });
+
+  /* ---- ETAPA ACTUAL (solo en proceso) ---- */
+  const etapaActual = {};
+  enProceso.forEach(t => {
+    const etapa = t.etapaActual || t.estado || 'Desconocida';
+    if (!etapaActual[etapa]) etapaActual[etapa] = 0;
+    etapaActual[etapa]++;
+  });
+
+  /* ---- VALORES FINANCIEROS (NUEVO) ---- */
+  const salesCfg = readSalesConfig();
+  const aderenciaDefault = salesCfg.generalConfig?.aderenciaDefault || 50;
+  
+  let valorTotalGanado = 0;
+  let valorTotalPerdido = 0;
+  let mensualidadTotal = 0;
+  let adherenciaTotal = 0;
+
+  // Solo contamos lo ganado en el mes actual para la meta de este mes
+  const currentMonthStr = new Date().toISOString().substring(0, 7); // "YYYY-MM"
+  const metasMes = salesCfg.monthlyGoals?.[currentMonthStr] || { general: 0, individual: {} };
+
+  tasks.forEach(t => {
+    const mensualidad = parseFloat(t.mensualidad) || 0;
+    const aderencia = t.aderencia !== undefined ? parseFloat(t.aderencia) : aderenciaDefault;
+    const totalCliente = mensualidad + aderencia;
+
+    if (t.status === 'Activo' || (t.status && t.status.includes('Activo'))) {
+      valorTotalGanado += totalCliente;
+      mensualidadTotal += mensualidad;
+      adherenciaTotal += aderencia;
+    } else if (t.status === 'Cancelado' || (t.status && t.status.includes('Cancelado'))) {
+      valorTotalPerdido += totalCliente;
+    }
+  });
+
+  /* ---- POR CONSULTOR (con metas) ---- */
+  const globalCfg = readGlobalConfig();
+  const consultantMetas = globalCfg.consultantMetas || {};
+  const individualSalesGoals = metasMes.individual || {};
+
   const porConsultor = {};
   tasks.forEach(t => {
-    [t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct]
-      .filter(r => r && r !== '')
-      .forEach(consultor => {
-        if (!porConsultor[consultor])
-          porConsultor[consultor] = { total:0, activos:0, enProceso:0, cancelados:0, etapas:0 };
-        porConsultor[consultor].etapas++;
-      });
-    const participantes = new Set([t.rKickoff,t.rVer,t.rCap,t.rGoLive,t.rAct].filter(r=>r&&r!==''));
-    participantes.forEach(c => {
-      porConsultor[c].total++;
-      if (t.status==='Activo')            porConsultor[c].activos++;
-      if (t.status==='En Implementación') porConsultor[c].enProceso++;
-      if (t.status==='Cancelado')         porConsultor[c].cancelados++;
+    const mensualidad = parseFloat(t.mensualidad) || 0;
+    const aderencia = t.aderencia !== undefined ? parseFloat(t.aderencia) : aderenciaDefault;
+    const totalCliente = mensualidad + aderencia;
+    const isActivo = t.status === 'Activo' || (t.status && t.status.includes('Activo'));
+
+    // Incluir a rVenta (vendedor) + los responsables de implementación
+    const personasInteres = new Set([t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct, t.rVenta].filter(r => r && r !== ''));
+
+    personasInteres.forEach(consultor => {
+      if (!porConsultor[consultor])
+        porConsultor[consultor] = { 
+          total: 0, activos: 0, enProceso: 0, cancelados: 0, etapas: 0, 
+          metaImpl: consultantMetas[consultor] || 0,
+          metaVenta: individualSalesGoals[consultor] || 0,
+          valorGanado: 0 
+        };
+      
+      // Contar una etapa si es responsable de una etapa técnica
+      const esTecnico = [t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct].includes(consultor);
+      if (esTecnico) porConsultor[consultor].etapas++;
+      
+      porConsultor[consultor].total++;
+      if (isActivo) {
+        porConsultor[consultor].activos++;
+        // Si es el vendedor, le sumamos el valor ganado
+        if (t.rVenta === consultor) {
+          porConsultor[consultor].valorGanado += totalCliente;
+        }
+      }
+      if (t.status === 'En Implementación' || (t.status && t.status.includes('Implementación'))) porConsultor[consultor].enProceso++;
+      if (t.status === 'Cancelado' || (t.status && t.status.includes('Cancelado'))) porConsultor[consultor].cancelados++;
     });
+  });
+
+  // Agregar % de cumplimiento de meta
+  Object.values(porConsultor).forEach(c => {
+    c.pctMetaImpl = c.metaImpl > 0 ? +((c.enProceso / c.metaImpl) * 100).toFixed(1) : null;
+    c.pctMetaVenta = c.metaVenta > 0 ? +((c.valorGanado / c.metaVenta) * 100).toFixed(1) : null;
   });
 
   /* ---- POR MES ---- */
@@ -982,18 +1111,33 @@ function buildDashboard(tasks) {
     const mes = t.mesInicio || 'Sin mes';
     if (!porMes[mes]) porMes[mes] = { mes, iniciadas:0, finalizadas:0, canceladas:0, enCurso:0 };
     porMes[mes].iniciadas++;
-    if (t.status==='Activo')            porMes[mes].finalizadas++;
-    if (t.status==='Cancelado')         porMes[mes].canceladas++;
-    if (t.status==='En Implementación') porMes[mes].enCurso++;
+    if (t.status==='Activo' || (t.status && t.status.includes('Activo')))           porMes[mes].finalizadas++;
+    if (t.status==='Cancelado' || (t.status && t.status.includes('Cancelado')))     porMes[mes].canceladas++;
+    if (t.status==='En Implementación' || (t.status && t.status.includes('Implementación'))) porMes[mes].enCurso++;
   });
 
   /* ---- ALERTAS ---- */
+  const tareasEnAlerta = tasks
+    .filter(t => t.alerta && t.alerta !== 'NO')
+    .map(t => ({
+      id: t.id,
+      nombre: t.nombre,
+      alerta: t.alerta,
+      dImpl: t.dImpl,
+      dSinMov: t.dSinMov,
+      pais: t.pais,
+      rKickoff: t.rKickoff,
+      estado: t.estado
+    }))
+    .slice(0, 50);
+
   const alertas = {
-    criticas    : tasks.filter(t=>t.alerta==='CRITICA').length,
-    sinMovimiento: tasks.filter(t=>t.alerta==='SIN_MOV').length,
-    pausadas    : tasks.filter(t=>t.pausada==='SÍ').length,
-    esperandoCli: tasks.filter(t=>t.espCli==='SÍ').length,
-    morosidad   : tasks.filter(t=>t.moro==='SÍ').length
+    criticas     : tasks.filter(t => t.alerta && t.alerta.includes('20')).length,
+    sinMovimiento: tasks.filter(t => t.alerta && t.alerta.includes('Sin mov')).length,
+    pausadas     : tasks.filter(t => t.pausada==='SÍ').length,
+    esperandoCli : tasks.filter(t => t.espCli==='SÍ').length,
+    morosidad    : tasks.filter(t => t.moro==='SÍ').length,
+    detalle      : tareasEnAlerta
   };
 
   /* ---- TIPOS ---- */
@@ -1005,9 +1149,24 @@ function buildDashboard(tasks) {
   const ultimaActualizacion = new Date().toISOString();
 
   return {
-    kpis: { total, activos:activos.length, enProceso:enProceso.length,
-            cancelados:cancelados.length, tasaExito, tasaCancel, promDiasImpl },
-    canales, porPais, porConsultor, porMes, alertas, porTipo,
+    kpis: {
+      total,
+      activos: activos.length,
+      enProceso: enProceso.length,
+      cancelados: cancelados.length,
+      tasaExito,
+      tasaCancel,
+      tasaUpgrade,
+      promDiasImpl,
+      promDiasEnProceso,
+      valorTotalGanado,
+      valorTotalPerdido,
+      mensualidadTotal,
+      adherenciaTotal,
+      metaGeneral: metasMes.general,
+      pctMetaGeneral: metasMes.general > 0 ? +((valorTotalGanado / metasMes.general) * 100).toFixed(1) : null
+    },
+    canales, porPais, porPlan, etapaActual, porConsultor, porMes, alertas, porTipo,
     ultimaActualizacion,
     meta: {
       ultimaActualizacion,
@@ -1021,7 +1180,7 @@ function buildDashboard(tasks) {
 // ================================================================
 // RUTAS - AUTH
 // ================================================================
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', loginLimiter, (req, res) => {
   if (!CONFIG.JWT_SECRET) {
     return res.status(503).json({ error:'Falta configurar JWT_SECRET en el entorno' });
   }
@@ -1030,19 +1189,29 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ error: lang==='pt' ? 'Usuário e senha são obrigatórios' : 'Usuario y contraseña requeridos' });
 
   const usersList = readUsers();
-  const user = usersList.find(u => u.username === username.toLowerCase() && u.password === password);
-  if (!user)
+  const user = usersList.find(u => u.username === username.toLowerCase());
+  
+  // 🔒 Verificar contraseña con bcrypt (compatibilidad con ambas - migración en progreso)
+  const passwordIsValid = user && (
+    bcryptjs.compareSync(password, user.password) || 
+    user.password === password // Compatibilidad temporal con plaintext
+  );
+  
+  if (!user || !passwordIsValid)
     return res.status(401).json({ error: lang==='pt' ? 'Credenciais inválidas' : 'Credenciales inválidas' });
 
   const token = jwt.sign(
     { id:user.id, username:user.username, role:user.role, name:user.name },
     CONFIG.JWT_SECRET,
-    { expiresIn:'8h' }
+    { expiresIn:'8h' } // 8h para evitar desconexiones frecuentes
   );
   
   // Obtener configuración global guardada (sin exponer secretos al cliente)
   const globalConfig = readGlobalConfig();
   const listId = globalConfig.clickupListId || process.env.CLICKUP_LIST_ID;
+  
+  // ✅ Audit log
+  writeLog(user, 'AUTH_LOGIN_SUCCESS', { username: user.username });
   
   res.json({ 
     token, 
@@ -1064,10 +1233,13 @@ app.post('/api/auth/register', (req, res) => {
     return res.status(400).json({ error: lang==='pt' ? 'Usuário já existe' : 'El usuario ya existe' });
   }
 
+  // 🔒 Hash password con bcrypt
+  const hashedPassword = bcryptjs.hashSync(password, 10);
+  
   const newUser = {
     id: Date.now() + Math.floor(Math.random() * 1000),
     username: username.toLowerCase().trim(),
-    password: password,
+    password: hashedPassword, // 🔒 Contraseña hasheada
     name: name.trim(),
     role: 'consultant',
     createdAt: new Date().toISOString()
@@ -1094,6 +1266,24 @@ app.post('/api/auth/register', (req, res) => {
 
 app.get('/api/auth/me', auth, (req, res) => {
   res.json({ user: req.user });
+});
+
+// Renovar token JWT sin necesidad de volver a loguear
+// El cliente debe llamar este endpoint antes de que expire (ej: a los 7h de una sesión de 8h)
+app.post('/api/auth/token-refresh', auth, (req, res) => {
+  try {
+    if (!CONFIG.JWT_SECRET) {
+      return res.status(503).json({ error: 'JWT_SECRET no configurado' });
+    }
+    const newToken = jwt.sign(
+      { id: req.user.id, username: req.user.username, role: req.user.role, name: req.user.name },
+      CONFIG.JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+    res.json({ token: newToken, expiresIn: '8h' });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // Obtener información de red (IP local)
@@ -1170,21 +1360,27 @@ app.get('/api/users', auth, (req, res) => {
 app.post('/api/users', auth, (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
   const users = readUsers();
+  const rawPassword = String(req.body.password || '').trim();
+  if (rawPassword.length < 6) {
+    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+  }
   const newUser = {
     id: Date.now() + Math.floor(Math.random() * 1000),
     username: String(req.body.username || '').toLowerCase().trim(),
-    password: String(req.body.password || ''),
+    password: bcryptjs.hashSync(rawPassword, 10), // 🔒 Siempre hasheado
     role: String(req.body.role || 'consultant'),
-    name: String(req.body.name || '').trim()
+    name: String(req.body.name || '').trim(),
+    createdAt: new Date().toISOString()
   };
-  if (!newUser.username || !newUser.password || !newUser.name) {
-    return res.status(400).json({ error: 'Datos incompletos' });
+  if (!newUser.username || !newUser.name) {
+    return res.status(400).json({ error: 'Datos incompletos: username y name son requeridos' });
   }
   if (users.some(u => u.username === newUser.username)) {
     return res.status(400).json({ error: 'El usuario ya existe' });
   }
   users.push(newUser);
   writeUsers(users);
+  writeLog(req.user, 'CREATE_USER', { username: newUser.username, role: newUser.role });
   res.json({ ok: true, user: { id: newUser.id, username: newUser.username, name: newUser.name, role: newUser.role } });
 });
 
@@ -1195,9 +1391,12 @@ app.put('/api/users/:id/password', auth, (req, res) => {
   const user = users.find(u => u.id === id);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
   const newPassword = String(req.body.password || '').trim();
-  if (!newPassword) return res.status(400).json({ error: 'Contraseña vacía' });
-  user.password = newPassword;
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'Contraseña inválida (mínimo 6 caracteres)' });
+  }
+  user.password = bcryptjs.hashSync(newPassword, 10); // 🔒 Siempre hasheado
   writeUsers(users);
+  writeLog(req.user, 'CHANGE_PASSWORD', { targetUserId: id, targetUsername: user.username });
   res.json({ ok: true, message: 'Contraseña actualizada' });
 });
 
@@ -1368,47 +1567,19 @@ app.get('/api/data/sync', auth, (req, res) => {
 });
 
 // ================================================================
-// RUTAS - VENTAS Y METAS
+// RUTAS - VENTAS Y METAS (CONSOLIDADO)
 // ================================================================
 app.get('/api/sales/config', auth, (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
-  const config = readSalesConfig();
-  res.json(config);
+  res.json(readSalesConfig());
 });
 
 app.post('/api/sales/config', auth, (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
   const config = readSalesConfig();
-  
-  // Actualizar vendedores
-  if (req.body.sellers !== undefined) config.sellers = req.body.sellers;
-  if (req.body.monthlyGoals !== undefined) config.monthlyGoals = req.body.monthlyGoals;
-  if (req.body.vendorMatches !== undefined) config.vendorMatches = req.body.vendorMatches;
-  if (req.body.salesTargets !== undefined) config.salesTargets = req.body.salesTargets;
-  
-  writeSalesConfig(config);
-  res.json({ ok: true, config });
-});
-
-app.post('/api/sales/goal', auth, (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
-  const config = readSalesConfig();
-  const { seller, month, goal } = req.body;
-  
-  if (!seller || !month || goal === undefined) {
-    return res.status(400).json({ error: 'Datos incompletos' });
-  }
-  
-  if (!config.monthlyGoals[seller]) config.monthlyGoals[seller] = {};
-  config.monthlyGoals[seller][month] = goal;
-  
-  writeSalesConfig(config);
-  res.json({ ok: true });
-});
-
-app.get('/api/sales/goals', auth, (req, res) => {
-  const config = readSalesConfig();
-  res.json(config.monthlyGoals || {});
+  const newConfig = { ...config, ...req.body };
+  writeSalesConfig(newConfig);
+  res.json({ ok: true, config: newConfig });
 });
 
 // Sincronizar vendedores desde Excel/CSV
@@ -1420,7 +1591,7 @@ function normalizeForMatching(text) {
 
 // Helper: Buscar cliente por nombre (fuzzy matching)
 function findClientByName(nombre) {
-  const tareas = cache.get('clickup_tasks') || [];
+  const tareas = cache.get('clickup_tasks_raw') || [];
   const normalized = normalizeForMatching(nombre);
   
   // Búsqueda exacta primero
@@ -1440,14 +1611,9 @@ app.post('/api/sales/import-clients', auth, async (req, res) => {
       return res.status(403).json({ error: 'Solo admins pueden importar' });
     }
     
-    const { rows, vendedor } = req.body;
-    if (!rows || !Array.isArray(rows)) {
-      return res.status(400).json({ error: 'Formato inválido. Requiere array "rows"' });
-    }
-    
-    const tareas = cache.get('clickup_tasks') || [];
-    const config = readSalesConfig();
-    
+    const overrides = readLocalOverrides();
+    const rows = Array.isArray(req.body.rows) ? req.body.rows : (Array.isArray(req.body.data) ? req.body.data : []);
+    const requestVendedor = req.body.vendedor || '';
     let matched = 0;
     let updated = 0;
     let created = 0;
@@ -1460,50 +1626,38 @@ app.post('/api/sales/import-clients', auth, async (req, res) => {
       const existingTask = findClientByName(clienteName);
       
       if (existingTask) {
-        // UPDATE: Cliente existe, actualizar campos
         matched++;
+        const id = existingTask.id;
+        if (!overrides[id]) overrides[id] = {};
         
-        // Actualizar estado si viene en el Excel
-        if (row.estado || row.status) {
-          const nuevoEstado = (row.estado || row.status).trim().toLowerCase();
-          const estadosValidos = ['ganado', 'won', 'perdido', 'lost', 'implementando', 'in-implementation', 'desistio', 'canceled'];
-          
-          if (estadosValidos.includes(nuevoEstado)) {
-            let estadoMapeado = nuevoEstado;
-            if (nuevoEstado === 'won' || nuevoEstado === 'ganado') estadoMapeado = 'ganado';
-            if (nuevoEstado === 'lost' || nuevoEstado === 'perdido') estadoMapeado = 'perdido';
-            if (nuevoEstado === 'in-implementation' || nuevoEstado === 'implementando') estadoMapeado = 'en-implementacion';
-            if (nuevoEstado === 'canceled' || nuevoEstado === 'desistio') estadoMapeado = 'desistio';
-            
-            existingTask.statusSheet = estadoMapeado;
-            updated++;
-          }
-        }
-        
-        // Actualizar valor si viene en el Excel
-        if (row.valor || row.monto || row.amount) {
-          const valor = parseFloat(row.valor || row.monto || row.amount) || 0;
-          if (valor > 0) {
-            existingTask.valorSheet = valor;
-            updated++;
-          }
-        }
-        
-        // Actualizar vendedor si viene asignado
-        if (vendedor) {
-          existingTask.rVenta = vendedor;
+        // Mensualidad
+        const m = row.mensualidad || row.recurrente || row.monthly;
+        if (m !== undefined && m !== '') {
+          overrides[id].mensualidad = parseFloat(m) || 0;
           updated++;
         }
         
-        results.push({
-          cliente: clienteName,
-          action: 'updated',
-          taskId: existingTask.id,
-          estado: existingTask.statusSheet,
-          valor: existingTask.valorSheet
-        });
+        // Adherencia
+        const a = row.aderencia || row.implementacion || row.setup;
+        if (a !== undefined && a !== '') {
+          overrides[id].aderencia = parseFloat(a) || 0;
+          updated++;
+        }
+
+        // Vendedor
+        const v = row.vendedor || row.owner || requestVendedor;
+        if (v) {
+          overrides[id].rVenta = String(v).trim();
+          updated++;
+        }
+
+        // Estado (complementario local)
+        if (row.estado || row.status) {
+          overrides[id].lastImportStatus = String(row.estado || row.status).toLowerCase();
+        }
+
+        results.push({ id, cliente: clienteName, action: 'updated' });
       } else {
-        // CREATE: Cliente nuevo (no existe en ClickUp)
         created++;
         results.push({
           cliente: clienteName,
@@ -1514,17 +1668,9 @@ app.post('/api/sales/import-clients', auth, async (req, res) => {
         });
       }
     });
-    
-    // Actualizar cache con cambios
-    cache.set('clickup_tasks', tareas);
-    
-    writeLog(req.user, 'IMPORT_CLIENTS_EXCEL', {
-      matched,
-      updated,
-      created,
-      vendedor,
-      timestamp: new Date().toISOString()
-    });
+
+    writeLocalOverrides(overrides);
+    writeLog(req.user, 'IMPORT_CLIENTS_EXCEL', { count: rows.length, matched, updated, created });
     
     res.json({
       ok: true,
@@ -1532,7 +1678,7 @@ app.post('/api/sales/import-clients', auth, async (req, res) => {
       updated,
       created,
       results,
-      message: `${matched} coincidencias, ${updated} actualizados, ${created} nuevos`
+      message: `${matched} coincidencias, ${updated} actualizados en capa local, ${created} nuevos no encontrados`
     });
   } catch (e) {
     console.error('Error importando clientes:', e);
@@ -1775,74 +1921,43 @@ async function cargarDatosDominiosLocal() {
 }
 
 app.post('/api/sales/sync-vendedores', auth, (req, res) => {
-  // Sincronizar CONSULTORES (responsables comerciales) vs IMPLEMENTADORES
   try {
     const tareas = cache.get('clickup_tasks') || [];
-    const consultores = new Set();
-    const implementadores = new Set();
+    const fromBodyCons = Array.isArray(req.body.consultores) ? req.body.consultores : [];
+    const fromBodyVend = Array.isArray(req.body.vendedores) ? req.body.vendedores : [];
+
+    const consultores = new Set(fromBodyVend); // Priorizar lo que viene del frontend mejor procesado
+    const implementadores = new Set(fromBodyCons);
+    
     const vendorMatches = {};
     const implMatches = {};
     
+    // Si tenemos tareas, extraer también para asegurar matches individuales
     tareas.forEach(t => {
-      // CONSULTORES = Responsables Comerciales (Vendedores)
-      if (t.rVenta && t.rVenta.trim()) {
-        const vend = t.rVenta.trim();
-        consultores.add(vend);
-        
-        if (!vendorMatches[t.id]) {
-          vendorMatches[t.id] = {
-            clientName: t.nombre,
-            consultor: vend,
-            status: t.status,
-            plan: t.plan,
-            tipo: 'vendedor'
-          };
-        }
+      if (t.rVenta) {
+        consultores.add(t.rVenta.trim());
+        vendorMatches[t.id] = { clientName: t.nombre, consultor: t.rVenta.trim(), status: t.status, tipo: 'vendedor' };
       }
       
-      // IMPLEMENTADORES = Los otros responsables (kickoff, verificación, capacitación, go-live, activación)
-      const implementadores_roles = [t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct]
-        .filter(r => r && r.trim());
-      
-      implementadores_roles.forEach(role => {
+      const impl_roles = [t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct].filter(r => r && r.trim());
+      impl_roles.forEach(role => {
         implementadores.add(role);
         if (!implMatches[t.id]) implMatches[t.id] = [];
-        implMatches[t.id].push({
-          nombre: role,
-          roles: {
-            kickoff: t.rKickoff === role,
-            verificacion: t.rVer === role,
-            capacitacion: t.rCap === role,
-            golive: t.rGoLive === role,
-            activacion: t.rAct === role
-          }
-        });
+        implMatches[t.id].push({ nombre: role, roles: { kickoff: t.rKickoff === role, cap: t.rCap === role, act: t.rAct === role } });
       });
     });
     
     const config = readSalesConfig();
     config.consultores = Array.from(consultores).sort();
     config.implementadores = Array.from(implementadores).sort();
-    config.vendorMatches = vendorMatches;
-    config.implMatches = implMatches;
-    // Mantener sellers para compatibilidad hacia atrás
+    // Vendedores son consultores comerciales
     config.sellers = config.consultores;
+    
     writeSalesConfig(config);
     
-    writeLog(req.user, 'SYNC_ROLES', {
-      consultores: config.consultores.length,
-      implementadores: config.implementadores.length,
-      matches: Object.keys(vendorMatches).length
-    });
-    
-    res.json({
-      ok: true,
-      consultores: config.consultores.length,
-      implementadores: config.implementadores.length,
-      matches: Object.keys(vendorMatches).length
-    });
+    writeLog(req.user, 'SYNC_ROLES_SUCCESS', { count: consultores.size + implementadores.size });
+    res.json({ ok: true, vendedores: config.consultores.length, implementadores: config.implementadores.length });
   } catch (e) {
-    console.error('Error sincronizando consultores/implementadores:', e);
     res.status(500).json({ error: e.message });
   }
 });
@@ -1895,39 +2010,8 @@ app.post('/api/consultores/sync', auth, async (req, res) => {
 // KANBANS: Las rutas definitivas están definidas más abajo (línea ~2700).
 // Este bloque fue eliminado para evitar rutas duplicadas que rompían RBAC.
 
-// ================================================================
-// CLICKUP MEMBERS
-// ================================================================
-app.get('/api/clickup/members', auth, async (req, res) => {
-  try {
-    const clickupApiKey = getClickUpApiKey();
-    const CACHE_KEY = 'clickup_members';
-    const cached = cache.get(CACHE_KEY);
-    if (cached) return res.json({ members: cached });
-
-    let members = [];
-    const teamRes = await fetch(`https://api.clickup.com/api/v2/team`, {
-      headers: { Authorization: clickupApiKey }
-    });
-    const teamData = await teamRes.json();
-    if (teamData && teamData.teams && teamData.teams.length > 0) {
-      members = teamData.teams[0].members.map(m => m.user);
-    }
-
-    const uniqueMembers = members.map(m => ({
-      id: m.id,
-      username: m.username,
-      color: m.color,
-      initials: m.initials,
-      email: m.email
-    }));
-
-    cache.set(CACHE_KEY, uniqueMembers, 3600);
-    res.json({ members: uniqueMembers });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
+// Eliminado bloque duplicado de CLICKUP MEMBERS para evitar conflictos de estructura.
+// La versión definitiva reside en la línea ~2840.
 
 // Nuevo endpoint: Obtener estados disponibles en ClickUp
 // ================================================================
@@ -1966,33 +2050,83 @@ app.get('/api/clickup/list-info', auth, async (req, res) => {
   }
 });
 
+// PROXY GENÉRICO PARA CLICKUP (CORS FIX)
+// ================================================================
+app.get('/api/clickup/proxy/list/:id', auth, async (req, res) => {
+  try {
+    const listId = req.params.id;
+    const apiKey = getClickUpApiKey();
+    const resp = await fetch(`https://api.clickup.com/api/v2/list/${listId}`, {
+      headers: { Authorization: apiKey }
+    });
+    const data = await resp.json();
+    res.status(resp.status).json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/clickup/proxy/tasks', auth, async (req, res) => {
+  try {
+    const listId = getClickUpListId();
+    const apiKey = getClickUpApiKey();
+    const page = req.query.page || 0;
+    const url = `https://api.clickup.com/api/v2/list/${listId}/task?page=${page}&include_closed=true&archived=false&subtasks=true`;
+    const resp = await fetch(url, {
+      headers: { Authorization: apiKey }
+    });
+    const data = await resp.json();
+    res.status(resp.status).json(data);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ================================================================
 // CLICKUP SYNC → data/clientes.json + SSE(dataUpdated)
 // ================================================================
-const DATA_DIR = path.join(STATIC_ROOT, 'data');
-const CLIENTES_FILE = path.join(DATA_DIR, 'clientes.json');
-
 function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  // Ya manejado al inicio del servidor
 }
 
 async function obtenerTareasClickUpRaw({ apiKey, listId }) {
+  const mask = (s) => s ? (s.substring(0, 4) + '...' + s.substring(s.length - 4)) : 'MISSING';
+  console.log(`📡 Iniciando sincronización ClickUp. ListId: ${mask(listId)}, ApiKey: ${mask(apiKey)}`);
+  
   const tasks = [];
   let page = 0;
   while (page < 20) {
     const url = `https://api.clickup.com/api/v2/list/${listId}/task` +
       `?page=${page}&include_closed=true&archived=false&subtasks=true`;
-    const resp = await fetch(url, {
-      headers: { Authorization: apiKey },
-      timeout: 30000
-    });
-    if (!resp.ok) throw new Error(`ClickUp API ${resp.status}: ${resp.statusText}`);
+    let resp;
+    let retries = 0;
+    // Manejo de rate-limit 429 con retry automático
+    while (retries <= 3) {
+      resp = await fetch(url, {
+        headers: { Authorization: apiKey },
+        timeout: 30000
+      });
+      if (resp.status === 429) {
+        const retryAfter = parseInt(resp.headers.get('Retry-After') || '10', 10);
+        const waitMs = Math.min(retryAfter * 1000, 60000);
+        console.warn(`⚠️ ClickUp Rate Limit (429) en página ${page}. Esperando ${waitMs}ms...`);
+        await new Promise(r => setTimeout(r, waitMs));
+        retries++;
+        continue;
+      }
+      break;
+    }
+    if (!resp.ok) {
+      const errText = await resp.text();
+      console.error(`❌ ClickUp API Error ${resp.status} en página ${page}: ${resp.statusText}. Detalle: ${errText}`);
+      throw new Error(`ClickUp API ${resp.status}: ${resp.statusText}`);
+    }
     const data = await resp.json();
     if (!data.tasks || data.tasks.length === 0) break;
     tasks.push(...data.tasks);
     if (data.tasks.length < 100) break;
     page++;
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 400)); // Pequeña pausa entre páginas
   }
   return tasks;
 }
@@ -2035,8 +2169,37 @@ app.post('/api/clickup/sync', auth, async (req, res) => {
 
     const domData = await cargarDatosDominiosLocal();
 
-    // Pasar fetchTaskDetails como null o una función vacía ya que NO lo usaremos ahora
-    // Los campos ya vienen en tasksRaw.custom_fields
+    // 🆕 Limitar el fetching de detalles a tareas relevantes (no canceladas ni muy antiguas)
+    const detailedTasks = tasksRaw
+      .filter(t => {
+         const st = (t.status?.status || '').toLowerCase();
+         return !st.includes('cancel') && !st.includes('closed') && !st.includes('cerrado');
+      })
+      .slice(0, 100); // Límite de seguridad inicial
+
+    const detailFetcher = createLimitedFetcher(10, async (id) => {
+      const start = Date.now();
+      const res = await fetch(`https://api.clickup.com/api/v2/task/${id}`, {
+        headers: { Authorization: apiKey }
+      });
+      if (!res.ok) {
+        if (res.status === 429) {
+          console.warn(`⚠️ Rate Limit en ClickUp para tarea ${id}`);
+          return null;
+        }
+        return null;
+      }
+      return res.json();
+    });
+
+    // Leer datos anteriores para optimizar (prevClients cache fInicio)
+    let prevData = { clientes: [] };
+    if (fs.existsSync(CLIENTES_FILE)) {
+      try {
+        prevData = JSON.parse(fs.readFileSync(CLIENTES_FILE, 'utf8'));
+      } catch(e) { console.error('Error leyendo prevData:', e); }
+    }
+
     const clients = await mapTasksToClients(tasksRaw, {
       DIAS_ALERTA: 7,
       DIAS_META: CONFIG.DIAS_META,
@@ -2044,10 +2207,17 @@ app.post('/api/clickup/sync', auth, async (req, res) => {
       FERIADOS: CONFIG.FERIADOS,
       TAREAS_IGNORAR: CONFIG.TAREAS_IGNORAR,
       ESTADOS_IGNORAR: CONFIG.ESTADOS_IGNORAR,
-      ESTADOS_IMPL
+      ESTADOS_IMPL: CONFIG.ESTADOS_IMPL || []
     }, {
       tz,
-      fetchTaskDetails: null, // Desactivado para evitar 429
+      prevClients: prevData.clientes || [],
+      fetchTaskDetails: async (id) => {
+        // Solo obtener detalles si es una de las tareas filtradas como relevantes
+        if (detailedTasks.some(dt => dt.id === id)) {
+           return detailFetcher(id);
+        }
+        return null;
+      },
       domData
     });
 
@@ -2112,27 +2282,75 @@ app.get('/api/clickup/tasks', auth, async (req, res) => {
 // ================================================================
 app.get('/api/data', auth, async (req, res) => {
   try {
-    // Intentar leer el dataset persistido por el sync completo
+    let clientes = [];
+    let meta = {};
+
+    // 1. Obtener datos (archivo o caché)
     if (fs.existsSync(CLIENTES_FILE)) {
       try {
         const parsed = JSON.parse(fs.readFileSync(CLIENTES_FILE, 'utf8'));
-        const clientes = Array.isArray(parsed?.clientes) ? parsed.clientes : [];
-        if (clientes.length > 0) {
-          return res.json({
-            clientes,
-            meta: {
-              source: 'file',
-              updatedAt: parsed.updatedAt || null,
-              total: clientes.length,
-              fingerprint: parsed.fingerprint || null
-            }
-          });
-        }
-      } catch (_e) { /* fallthrough to cache */ }
+        clientes = Array.isArray(parsed?.clientes) ? parsed.clientes : [];
+        meta = {
+          source: 'file',
+          updatedAt: parsed.updatedAt || null,
+          totalOriginal: clientes.length,
+          fingerprint: parsed.fingerprint || null
+        };
+      } catch (_e) { /* fallthrough */ }
     }
-    // Fallback: caché en memoria / ClickUp en tiempo real
-    const tasks = await obtenerTareasClickUp();
-    res.json({ clientes: tasks, meta: cacheMeta });
+
+    if (clientes.length === 0) {
+      clientes = await obtenerTareasClickUp();
+      meta = { ...cacheMeta, source: 'cache', totalOriginal: clientes.length };
+    }
+
+    // 2. Aplicar Filtros (Query Params)
+    const { status, pais, consultor, plan, q, limit, skip } = req.query;
+
+    if (status) {
+      const s = String(status).toLowerCase();
+      clientes = clientes.filter(c => String(c.status || '').toLowerCase().includes(s) || String(c.estado || '').toLowerCase().includes(s));
+    }
+    if (pais) {
+      const p = normalizeText(pais);
+      clientes = clientes.filter(c => normalizeText(c.pais || '').includes(p));
+    }
+    if (consultor) {
+      const cons = normalizeText(consultor);
+      clientes = clientes.filter(c => 
+        normalizeText(c.rKickoff || '').includes(cons) || 
+        normalizeText(c.rVer || '').includes(cons) || 
+        normalizeText(c.rCap || '').includes(cons)
+      );
+    }
+    if (plan) {
+      const pl = normalizeText(plan);
+      clientes = clientes.filter(c => normalizeText(c.plan || '').includes(pl));
+    }
+    if (q) {
+      const search = normalizeText(q);
+      clientes = clientes.filter(c => 
+        normalizeText(c.nombre || '').includes(search) || 
+        normalizeText(c.ip || '').includes(search) || 
+        normalizeText(c.dominio || '').includes(search)
+      );
+    }
+
+    // 3. Paginación y Retorno
+    let finalClientes = mergeOverrides(clientes);
+    const totalFiltrado = finalClientes.length;
+    if (skip) finalClientes = finalClientes.slice(parseInt(skip, 10));
+    if (limit) finalClientes = finalClientes.slice(0, parseInt(limit, 10));
+
+    res.json({
+      clientes: finalClientes,
+      meta: {
+        ...meta,
+        totalFiltrado,
+        limit: limit ? parseInt(limit, 10) : null,
+        skip: skip ? parseInt(skip, 10) : 0
+      }
+    });
   } catch (e) {
     res.status(e.statusCode || 500).json({ error: e.message });
   }
@@ -2143,7 +2361,8 @@ app.get('/api/data', auth, async (req, res) => {
 // ================================================================
 app.get('/api/dashboard', auth, async (req, res) => {
   try {
-    const tasks     = await obtenerTareasClickUp();
+    const tasksRaw  = await obtenerTareasClickUp();
+    const tasks     = mergeOverrides(tasksRaw);
     const dashboard = buildDashboard(tasks);
     res.json(dashboard);
   } catch(e) {
@@ -2162,7 +2381,7 @@ app.get('/api/clientes', auth, async (req, res) => {
     const limitNum = parsePositiveInt(limit, 50, { min:1, max:200 });
     const pageNum = parsePositiveInt(page, 1, { min:1, max:10000 });
 
-    let filtradas = tasks;
+    let filtradas = tasks.filter(t => !debeIgnorar(t));
     if (status)    filtradas = filtradas.filter(t => t.status === status);
     if (pais)      filtradas = filtradas.filter(t => t.pais   === pais);
     if (consultor) filtradas = filtradas.filter(t =>
@@ -2409,25 +2628,142 @@ app.post('/api/refresh', auth, async (req, res) => {
 app.get('/api/buscar', auth, async (req, res) => {
   try {
     const { q } = req.query;
-    if (!q || q.length < 2) return res.json({ resultados:[] });
-    const tasks     = await obtenerTareasClickUp();
-    const busqueda  = normalizeText(q);
+    if (!q || q.length < 2) return res.json({ resultados: [] });
+    const tasks    = await obtenerTareasClickUp();
+    const busqueda = normalizeText(q);
     const resultados = tasks
-      .filter(t => normalizeText(t.nombre).includes(busqueda) ||
-                   (t.ip && normalizeText(t.ip).includes(busqueda)) ||
-                   (t.dominio && normalizeText(t.dominio).includes(busqueda)))
-      .slice(0,10)
-      .map(t => ({ id:t.id, nombre:t.nombre, status:t.status,
-                   pais:t.pais, ip:t.ip, linkHola:t.linkHola }));
-    res.json({ resultados });
-  } catch(e) {
+      .filter(t =>
+        normalizeText(t.nombre || '').includes(busqueda) ||
+        (t.ip     && normalizeText(t.ip).includes(busqueda)) ||
+        (t.dominio && normalizeText(t.dominio).includes(busqueda)) ||
+        (t.pais   && normalizeText(t.pais).includes(busqueda)) ||
+        (t.email  && normalizeText(t.email).includes(busqueda)) ||
+        (t.plan   && normalizeText(t.plan).includes(busqueda)) ||
+        (t.rKickoff && normalizeText(t.rKickoff).includes(busqueda)) ||
+        (t.rVer   && normalizeText(t.rVer).includes(busqueda)) ||
+        (t.rCap   && normalizeText(t.rCap).includes(busqueda)) ||
+        (t.rVenta && normalizeText(t.rVenta).includes(busqueda))
+      )
+      .slice(0, 20)
+      .map(t => ({
+        id: t.id,
+        nombre: t.nombre,
+        status: t.status,
+        estado: t.estado || '',
+        pais: t.pais || '',
+        plan: t.plan || '',
+        ip: t.ip || '',
+        dominio: t.dominio || '',
+        linkHola: t.linkHola || '',
+        rKickoff: t.rKickoff || '',
+        rVenta: t.rVenta || ''
+      }));
+    res.json({ resultados, total: resultados.length });
+  } catch (e) {
     res.status(e.statusCode || 500).json({ error: e.message });
   }
 });
 
 // ================================================================
-// RUTAS - OPA / HOLA SUITE PROXY
+// RUTA - ACTUALIZAR VALORES FINANCIEROS (LOCAL OVERRIDE)
 // ================================================================
+app.post('/api/clientes/:id/financials', auth, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { mensualidad, aderencia, v_total, rVenta, notas } = req.body;
+    
+    const overrides = readLocalOverrides();
+    if (!overrides[id]) overrides[id] = {};
+    
+    if (mensualidad !== undefined) overrides[id].mensualidad = parseFloat(mensualidad) || 0;
+    if (aderencia !== undefined) overrides[id].aderencia = parseFloat(aderencia) || 0;
+    if (v_total !== undefined) overrides[id].valorVenta = parseFloat(v_total) || 0;
+    if (rVenta !== undefined) overrides[id].rVenta = String(rVenta).trim();
+    if (notas !== undefined) overrides[id].notas_locales = String(notas).trim();
+    
+    overrides[id].updatedAt = new Date().toISOString();
+    
+    writeLocalOverrides(overrides);
+    writeLog(req.user, 'EDIT_FINANCIALS', { clientId: id, fields: Object.keys(req.body) });
+    
+    res.json({ ok: true, id, data: overrides[id] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+// ================================================================
+// RUTAS - VENTAS Y METAS
+// ================================================================
+
+/**
+ * Establecer metas de ventas (General e Individual por mes)
+ */
+app.post('/api/sales/goals', auth, (req, res) => {
+  try {
+    if (req.user.role !== 'admin') return res.status(403).json({ error: 'Solo admins' });
+    
+    const { month, general, individual } = req.body; // month: "2024-04"
+    if (!month) return res.status(400).json({ error: 'Falta mes (YYYY-MM)' });
+    
+    const salesCfg = readSalesConfig();
+    if (!salesCfg.monthlyGoals) salesCfg.monthlyGoals = {};
+    
+    salesCfg.monthlyGoals[month] = {
+      general: parseFloat(general) || 0,
+      individual: individual || {}
+    };
+    
+    writeSalesConfig(salesCfg);
+    writeLog(req.user, 'SET_GOALS', { month, general });
+    
+    res.json({ ok: true, month, data: salesCfg.monthlyGoals[month] });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * Obtener estadísticas históricas de ventas
+ */
+app.get('/api/sales/stats', auth, async (req, res) => {
+  try {
+    const tasksRaw = await obtenerTareasClickUp();
+    const tasks = mergeOverrides(tasksRaw);
+    
+    const statsByMonth = {};
+    const salesCfg = readSalesConfig();
+    const aderenciaDefault = salesCfg.generalConfig?.aderenciaDefault || 50;
+
+    tasks.forEach(t => {
+      const month = t.mesInicio || 'Desconocido';
+      if (!statsByMonth[month]) {
+        statsByMonth[month] = { 
+          month, 
+          ganado: 0, 
+          perdido: 0, 
+          iniciados: 0, 
+          concluidos: 0,
+          meta: salesCfg.monthlyGoals?.[month]?.general || 0
+        };
+      }
+      
+      const val = (parseFloat(t.mensualidad) || 0) + (t.aderencia !== undefined ? parseFloat(t.aderencia) : aderenciaDefault);
+      
+      statsByMonth[month].iniciados++;
+      if (t.status === 'Activo' || (t.status && t.status.includes('Activo'))) {
+        statsByMonth[month].ganado += val;
+        statsByMonth[month].concluidos++;
+      } else if (t.status === 'Cancelado' || (t.status && t.status.includes('Cancelado'))) {
+        statsByMonth[month].perdido += val;
+      }
+    });
+
+    res.json(Object.values(statsByMonth).sort((a, b) => b.month.localeCompare(a.month)));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.post('/api/opa/test', auth, async (req, res) => {
   try {
     const globalConfig = readGlobalConfig();
@@ -2601,8 +2937,27 @@ app.post('/api/v1/atendimento/mensagem', auth, async (req, res) => {
 app.post('/api/clickup/task/:id/status', auth, async (req, res) => {
   try {
     const apiKey = getClickUpApiKey();
-    const status = String(req.body?.status || '').trim();
+    let status = String(req.body?.status || '').trim().toLowerCase();
     if (!status) return res.status(400).json({ error: 'Status requerido' });
+
+    // Normalización de estados para el Kanban
+    const statusMap = {
+      'kickoff': 'en kickoff',
+      'analisis meta': 'en analisis meta',
+      'análisis de meta': 'en analisis meta',
+      'instalacion': 'listo para instalación',
+      'capacitacion': 'en capacitación',
+      'go-live': 'go-live',
+      'go live': 'go-live',
+      'activac': 'activación canales',
+      'activación / canales': 'activación canales',
+      'espera wispro': 'en espera wispro'
+    };
+
+    if (statusMap[status]) {
+      status = statusMap[status];
+    }
+
     const resp = await fetch(`https://api.clickup.com/api/v2/task/${encodeURIComponent(req.params.id)}`, {
       method: 'PUT',
       headers: {
@@ -2625,6 +2980,7 @@ app.post('/api/clickup/task/:id/comment', auth, async (req, res) => {
     const taskId = req.params.id;
     const apiKey = getClickUpApiKey();
     const comment = String(req.body?.comment || '').trim();
+    const author = String(req.body?.author || '').trim();
     
     if (!comment) {
       return res.status(400).json({ error: 'Comentario requerido' });
@@ -2636,13 +2992,15 @@ app.post('/api/clickup/task/:id/comment', auth, async (req, res) => {
       return res.status(400).json({ error: 'Task ID requerido' });
     }
     
+    const commentText = author ? `Comentado por ${author}: ${comment}` : comment;
+
     const resp = await fetch(`https://api.clickup.com/api/v2/task/${encodeURIComponent(taskId)}/comment`, {
       method: 'POST',
       headers: {
         Authorization: apiKey,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ comment_text: comment, notify_all: false }),
+      body: JSON.stringify({ comment_text: commentText, notify_all: false }),
       timeout: 30000
     });
     
@@ -2681,6 +3039,149 @@ app.post('/api/clickup/task/:id/tag', auth, async (req, res) => {
   }
 });
 
+/**
+ * 🆕 NUEVO: Obtener miembros del espacio de trabajo (Team) de ClickUp con Caché
+ */
+app.get('/api/clickup/members', auth, async (req, res) => {
+  try {
+    const force = req.query.force === 'true';
+    
+    // 1. Verificar Caché (si no se fuerza)
+    if (!force) {
+      const cachedMembers = cache.get('clickup_members');
+      if (cachedMembers) {
+        console.log(`📡 [API] Retornando ${cachedMembers.members.length} miembros desde caché`);
+        return res.json({ ok: true, ...cachedMembers, fromCache: true });
+      }
+    } else {
+      console.log('📡 [API] Forzando recarga de miembros de ClickUp...');
+    }
+
+    const apiKey = getClickUpApiKey();
+    if (!apiKey) return res.status(400).json({ error: 'ClickUp API Key no disponible' });
+    
+    // 2. Obtener el Team ID (Workspace)
+    const teamsResp = await fetch('https://api.clickup.com/api/v2/team', {
+      headers: { Authorization: apiKey }
+    });
+    
+    if (!teamsResp.ok) {
+      const errJson = await teamsResp.json().catch(() => ({}));
+      return res.status(teamsResp.status).json({ error: errJson.err || errJson.error || 'No se pudo obtener el Workspace de ClickUp' });
+    }
+
+    const teamsJson = await teamsResp.json();
+    if (!teamsJson.teams?.length) {
+      return res.status(404).json({ error: 'No se encontraron Workspaces vinculados en ClickUp' });
+    }
+    
+    const teamId = teamsJson.teams[0].id;
+    const members = teamsJson.teams[0].members || [];
+    
+    // 3. Guardar en Caché (10 minutos para miembros)
+    const cacheData = { teamId, members };
+    cache.set('clickup_members', cacheData, 600); 
+
+    console.log(`📡 [API] Enviando ${members.length} miembros del Team ${teamId} (y guardando en caché)`);
+    res.json({ ok: true, ...cacheData });
+  } catch (e) {
+    console.error('❌ Error fetching ClickUp members:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * 🆕 NUEVO: Actualizar Campo Personalizado en ClickUp
+ */
+app.post('/api/clickup/task/:id/custom_field/:fieldId', auth, async (req, res) => {
+  try {
+    const { id, fieldId } = req.params;
+    const { value } = req.body; // El valor puede ser un string, array, etc.
+    const apiKey = getClickUpApiKey();
+
+    if (!apiKey) return res.status(400).json({ error: 'ClickUp API Key no disponible' });
+
+    // ClickUp requiere un formato específico para campos personalizados según su tipo
+    const resp = await fetch(`https://api.clickup.com/api/v2/task/${id}/field/${fieldId}`, {
+      method: 'POST',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ value }),
+      timeout: 30000
+    });
+
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error(`ClickUp API Error (CustomField):`, resp.status, json);
+      return res.status(resp.status).json({ error: json?.err || json?.error || `ClickUp HTTP ${resp.status}` });
+    }
+
+    res.json({ ok: true, value, response: json });
+  } catch (e) {
+    console.error('Custom field endpoint error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * 🆕 NUEVO: Eliminar Etiqueta en ClickUp
+ */
+app.delete('/api/clickup/task/:id/tag/:tag', auth, async (req, res) => {
+  try {
+    const { id, tag } = req.params;
+    const apiKey = getClickUpApiKey();
+    if (!apiKey) return res.status(400).json({ error: 'ClickUp API Key no disponible' });
+
+    const resp = await fetch(`https://api.clickup.com/api/v2/task/${id}/tag/${encodeURIComponent(tag)}`, {
+      method: 'DELETE',
+      headers: { Authorization: apiKey },
+      timeout: 30000
+    });
+
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) return res.status(resp.status).json({ error: json?.err || json?.error || `ClickUp HTTP ${resp.status}` });
+
+    res.json({ ok: true, tag });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+/**
+ * 🆕 NUEVO: Actualizar Responsables (Assignees) en ClickUp
+ */
+app.put('/api/clickup/task/:id/assignees', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { assignees } = req.body; // Array de IDs de usuario
+    const apiKey = getClickUpApiKey();
+    if (!apiKey) return res.status(400).json({ error: 'ClickUp API Key no disponible' });
+
+    if (!Array.isArray(assignees)) {
+      return res.status(400).json({ error: 'Se requiere un array de assignees' });
+    }
+
+    const resp = await fetch(`https://api.clickup.com/api/v2/task/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: apiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ assignees }),
+      timeout: 30000
+    });
+
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) return res.status(resp.status).json({ error: json?.err || json?.error || `ClickUp HTTP ${resp.status}` });
+
+    res.json({ ok: true, assignees: json.assignees });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/logs', auth, (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Prohibido' });
   try {
@@ -2693,16 +3194,116 @@ app.get('/api/forms/submissions', (_req, res) => {
   res.json({ ok: true, submissions: readFormSubmissions() });
 });
 
+// Admin: listar/crear/editar formularios dinámicos
+app.get('/api/forms', auth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Permiso denegado' });
+  const forms = readFormsDefinitions();
+  res.json({ ok: true, forms });
+});
+
+app.post('/api/forms', auth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Permiso denegado' });
+  const body = req.body || {};
+  const id = String(body.id || '').trim() || `form-${Date.now()}`;
+  const name = String(body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Nombre requerido' });
+  const forms = readFormsDefinitions();
+  if (forms.find(f => f.id === id)) return res.status(400).json({ error: 'ID ya existe' });
+  const nowIso = new Date().toISOString();
+  const record = {
+    id,
+    name,
+    public: Boolean(body.public),
+    fields: Array.isArray(body.fields) ? body.fields : [],
+    createdAt: nowIso,
+    updatedAt: nowIso
+  };
+  forms.unshift(record);
+  writeFormsDefinitions(forms);
+  res.json({ ok: true, form: record });
+});
+
+app.put('/api/forms/:id', auth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Permiso denegado' });
+  const id = String(req.params.id || '').trim();
+  const forms = readFormsDefinitions();
+  const idx = forms.findIndex(f => f.id === id);
+  if (idx === -1) return res.status(404).json({ error: 'Formulario no encontrado' });
+  const existing = forms[idx];
+  const body = req.body || {};
+  const updated = {
+    ...existing,
+    name: String(body.name ?? existing.name).trim(),
+    public: body.public === undefined ? existing.public : Boolean(body.public),
+    fields: Array.isArray(body.fields) ? body.fields : existing.fields,
+    updatedAt: new Date().toISOString()
+  };
+  forms[idx] = updated;
+  writeFormsDefinitions(forms);
+  res.json({ ok: true, form: updated });
+});
+
+app.delete('/api/forms/:id', auth, (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Permiso denegado' });
+  const id = String(req.params.id || '').trim();
+  const forms = readFormsDefinitions();
+  const protectedIds = new Set(['upgrade', 'churn-risk', 'eval-system', 'eval-implementation']);
+  if (protectedIds.has(id)) return res.status(400).json({ error: 'No se puede eliminar este formulario' });
+  const filtered = forms.filter(f => f.id !== id);
+  writeFormsDefinitions(filtered);
+  res.json({ ok: true });
+});
+
+// Público: obtener definición y enviar respuesta
+app.get('/api/forms/public/:id', (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const forms = readFormsDefinitions();
+  const form = forms.find(f => f.id === id);
+  if (!form || !form.public) return res.status(404).json({ error: 'Formulario no disponible' });
+  res.json({ ok: true, form: { id: form.id, name: form.name, fields: form.fields } });
+});
+
+function persistDynamicFormSubmission(form, answers) {
+  const record = {
+    id: `form-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    formId: form.id,
+    formName: form.name,
+    createdAt: new Date().toISOString(),
+    source: 'public_form_dynamic',
+    answers
+  };
+  const items = readFormSubmissions();
+  items.unshift(record);
+  writeFormSubmissions(items);
+  return record;
+}
+
+app.post('/api/forms/submit/:id', (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const forms = readFormsDefinitions();
+  const form = forms.find(f => f.id === id);
+  if (!form || !form.public) return res.status(404).json({ error: 'Formulario no disponible' });
+  const answers = req.body?.answers && typeof req.body.answers === 'object' ? req.body.answers : {};
+
+  const missing = [];
+  (form.fields || []).forEach(field => {
+    if (!field?.required) return;
+    const val = answers[field.id];
+    if (val === undefined || val === null || String(val).trim() === '') missing.push(field.id);
+  });
+  if (missing.length) return res.status(400).json({ error: `Campos requeridos faltantes: ${missing.join(', ')}` });
+
+  const record = persistDynamicFormSubmission(form, answers);
+  res.json({ ok: true, submission: record });
+});
+
 app.post('/api/forms/:type', (req, res) => {
   const type = String(req.params.type || '').trim();
   if (!['upgrade', 'churn-risk'].includes(type)) {
     return res.status(400).json({ error: 'Tipo de formulario no soportado' });
   }
   const payload = req.body || {};
-  const record = {
-    id: `form-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    type,
-    createdAt: new Date().toISOString(),
+  const answers = {
     clientName: String(payload.clientName || '').trim(),
     contactName: String(payload.contactName || '').trim(),
     email: String(payload.email || '').trim(),
@@ -2710,12 +3311,12 @@ app.post('/api/forms/:type', (req, res) => {
     requestedPlan: String(payload.requestedPlan || '').trim(),
     value: Number(payload.value || 0) || 0,
     reason: String(payload.reason || '').trim(),
-    urgency: String(payload.urgency || '').trim(),
-    source: 'public_form'
+    urgency: String(payload.urgency || '').trim()
   };
-  const items = readFormSubmissions();
-  items.unshift(record);
-  writeFormSubmissions(items);
+  const forms = readFormsDefinitions();
+  const form = forms.find(f => f.id === type);
+  if (!form || !form.public) return res.status(404).json({ error: 'Formulario no disponible' });
+  const record = persistDynamicFormSubmission(form, answers);
   res.json({ ok: true, submission: record });
 });
 
@@ -2749,7 +3350,6 @@ app.get('/:filename', (req, res, next) => {
 // ================================================================
 // KANBANS PERSONALIZADOS
 // ================================================================
-const KANBANS_FILE = path.join(STATIC_ROOT, 'kanbans.json');
 
 function readKanbans() {
   try {
@@ -2959,7 +3559,7 @@ app.get('/api/kanbans', auth, (req, res) => {
     const role = req.user.role || 'viewer';
     const allKanbans = readKanbans();
     const visibleKanbans = allKanbans.filter(kb => 
-      kb.permissions?.view?.includes(role) || kb.ownerId === req.user.id
+      kb.permissions?.view?.includes(role) || kb.ownerId === req.user.id || (Array.isArray(kb.sharedWith) && kb.sharedWith.includes(req.user.id))
     );
     res.json(visibleKanbans);
   } catch (e) {
@@ -2981,6 +3581,7 @@ app.post('/api/kanbans', auth, (req, res) => {
       id: 'kb_' + Date.now(),
       name,
       ownerId: req.user.id,
+      sharedWith: [],
       linkedToClickup: !!linkedToClickup,
       columns: columns || [],
       cards: linkedToClickup ? undefined : [],
@@ -3008,7 +3609,10 @@ app.put('/api/kanbans/:id', auth, (req, res) => {
     }
 
     // Update fields
-    const updated = { ...board, ...req.body, id: board.id, ownerId: board.ownerId };
+    const safeSharedWith = Array.isArray(req.body?.sharedWith)
+      ? req.body.sharedWith.map(x => Number(x)).filter(Number.isFinite)
+      : board.sharedWith;
+    const updated = { ...board, ...req.body, sharedWith: safeSharedWith, id: board.id, ownerId: board.ownerId };
     allKanbans[idx] = updated;
 
     writeKanbans(allKanbans);
@@ -3043,7 +3647,6 @@ app.delete('/api/kanbans/:id', auth, (req, res) => {
 });
 
 // Agregar comentario a tarjeta (usa archivo separado para no corromper el array de kanbans)
-const KANBAN_COMMENTS_FILE = path.join(STATIC_ROOT, 'kanban_comments.json');
 
 function readKanbanComments() {
   try {
@@ -3211,9 +3814,8 @@ app.post('/api/client/delete-documented', auth, async (req, res) => {
 
     // Mark as deleted in database (soft delete) instead of hard delete
     let config = {};
-    const cfgFile = path.join(__dirname, 'sales_config.json');
-    if (fs.existsSync(cfgFile)) {
-      config = JSON.parse(fs.readFileSync(cfgFile, 'utf8'));
+    if (fs.existsSync(SALES_CONFIG_FILE)) {
+      config = JSON.parse(fs.readFileSync(SALES_CONFIG_FILE, 'utf8'));
     }
 
     if (!config.deletedClients) config.deletedClients = [];
@@ -3226,7 +3828,7 @@ app.post('/api/client/delete-documented', auth, async (req, res) => {
       documentation
     });
 
-    fs.writeFileSync(cfgFile, JSON.stringify(config, null, 2));
+    fs.writeFileSync(SALES_CONFIG_FILE, JSON.stringify(config, null, 2));
 
     // Broadcast to all clients
     broadcastEvent('client-deleted', {
@@ -3258,9 +3860,8 @@ app.get('/api/audit/logs', auth, (req, res) => {
 app.get('/api/client/deleted', auth, (req, res) => {
   try {
     let config = {};
-    const cfgFile = path.join(__dirname, 'sales_config.json');
-    if (fs.existsSync(cfgFile)) {
-      config = JSON.parse(fs.readFileSync(cfgFile, 'utf8'));
+    if (fs.existsSync(SALES_CONFIG_FILE)) {
+      config = JSON.parse(fs.readFileSync(SALES_CONFIG_FILE, 'utf8'));
     }
     
     res.json({ deletedClients: config.deletedClients || [] });
@@ -3476,10 +4077,995 @@ app.get('/api/sales/summary', auth, (req, res) => {
   }
 });
 
+// ========== ENDPOINT 1: Traer TODO de ClickUp ==========
+app.get('/api/clickup/full-data', async (req, res) => {
+  try {
+    // 0) Prioridad: snapshot procesado (servidor) para no pegarle a ClickUp en cada carga
+    const cachedProcessed = cache.get('clickup_clients_processed');
+    const cachedDashboard = cache.get('clickup_dashboard_snapshot');
+    if (Array.isArray(cachedProcessed) && cachedProcessed.length > 0) {
+      const dashboard = cachedDashboard || buildDashboard(cachedProcessed);
+      return res.json({
+        ok: true,
+        data: {
+          tareas: cachedProcessed,
+          summary: dashboard.kpis,
+          porPais: dashboard.porPais,
+          porConsultor: dashboard.porConsultor,
+          alertas: dashboard.alertas,
+          canales: dashboard.canales,
+          meta: dashboard.meta
+        },
+        meta: {
+          source: 'server_cache',
+          syncedAt: clickupSync.lastSuccessAt || null
+        }
+      });
+    }
+
+    // 1) Fallback: archivo local (última sync exitosa)
+    if (fs.existsSync(CLIENTES_FILE)) {
+      try {
+        const payload = JSON.parse(fs.readFileSync(CLIENTES_FILE, 'utf8'));
+        const clientes = Array.isArray(payload?.clientes) ? payload.clientes : [];
+        if (clientes.length > 0) {
+          const dashboard = buildDashboard(clientes);
+          cache.set('clickup_clients_processed', clientes, CLICKUP_SYNC_INTERVAL_MS / 1000);
+          cache.set('clickup_dashboard_snapshot', dashboard, CLICKUP_SYNC_INTERVAL_MS / 1000);
+          return res.json({
+            ok: true,
+            data: {
+              tareas: clientes,
+              summary: dashboard.kpis,
+              porPais: dashboard.porPais,
+              porConsultor: dashboard.porConsultor,
+              alertas: dashboard.alertas,
+              canales: dashboard.canales,
+              meta: dashboard.meta
+            },
+            meta: {
+              source: 'file',
+              syncedAt: payload.updatedAt || null
+            }
+          });
+        }
+      } catch (_e) {}
+    }
+
+    let tareas = [];
+    
+    // Intentar obtener de ClickUp con timeout
+    try {
+      console.log('📡 Intentando obtener datos de ClickUp...');
+      const taskPromise = obtenerTareasClickUp();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 30000)
+      );
+      tareas = await Promise.race([taskPromise, timeoutPromise]);
+      console.log(`✅ Datos obtenidos de ClickUp: ${tareas.length} items`);
+    } catch (e) {
+      console.warn(`⚠️ ClickUp no disponible (${e.message}), usando archivo de fallback...`);
+      
+      // Fallback: leer clientes.json local
+      if (fs.existsSync(CLIENTES_FILE)) {
+        const data = JSON.parse(fs.readFileSync(CLIENTES_FILE, 'utf8'));
+        tareas = Array.isArray(data.clientes) ? data.clientes : [];
+        console.log(`✅ Datos obtenidos del archivo local: ${tareas.length} items`);
+      } else {
+        throw new Error('No hay datos disponibles (ClickUp no responde y no hay fallback)');
+      }
+    }
+    
+    let procesadas = await computeProcessedClientsFromTasks(tareas);
+
+    // Filtrar tareas ignoradas (tests, configs, etc) GLOBALMENTE
+    const conteoAntes = procesadas.length;
+    procesadas = procesadas.filter(t => !debeIgnorar(t));
+    console.log(`✅ Filtrado completado: ${conteoAntes - procesadas.length} tareas ignoradas eliminadas. Quedan ${procesadas.length}.`);
+
+    const dashboard = buildDashboard(procesadas);
+    // Cachear snapshot para siguientes cargas
+    cache.set('clickup_clients_processed', procesadas, CLICKUP_SYNC_INTERVAL_MS / 1000);
+    cache.set('clickup_dashboard_snapshot', dashboard, CLICKUP_SYNC_INTERVAL_MS / 1000);
+    res.json({
+      ok: true,
+      data: {
+        tareas: procesadas,
+        summary: dashboard.kpis,
+        porPais: dashboard.porPais,
+        porConsultor: dashboard.porConsultor,
+        alertas: dashboard.alertas,
+        canales: dashboard.canales,
+        meta: dashboard.meta
+      }
+    });
+  } catch (e) {
+    console.error('❌ Error en /api/clickup/full-data:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ========== ENDPOINT 1b: Diagnóstico ClickUp (Server-side) ==========
+app.get('/api/clickup/diagnostic', auth, async (req, res) => {
+  try {
+    const listId = getClickUpListId();
+    const apiKey = getClickUpApiKey();
+    
+    if (!apiKey || !listId) {
+      return res.status(400).json({ 
+        ok: false, 
+        error: 'Credenciales de ClickUp no configuradas en el servidor' 
+      });
+    }
+
+    console.log('🔍 Ejecutando diagnóstico de ClickUp desde el servidor...');
+    
+    // 1. Info de la lista (usando fetch nativo)
+    const listResp = await fetch(`https://api.clickup.com/api/v2/list/${listId}`, {
+      headers: { Authorization: apiKey },
+      timeout: 30000
+    });
+    if (!listResp.ok) throw new Error(`ClickUp list API ${listResp.status}: ${listResp.statusText}`);
+    const listData = await listResp.json();
+    
+    // 2. Tareas (limit 100 para diagnóstico)
+    const tasksResp = await fetch(`https://api.clickup.com/api/v2/list/${listId}/task?page=0&include_closed=true&archived=false&limit=100`, {
+      headers: { Authorization: apiKey },
+      timeout: 30000
+    });
+    if (!tasksResp.ok) throw new Error(`ClickUp tasks API ${tasksResp.status}: ${tasksResp.statusText}`);
+    const tasksData = await tasksResp.json();
+    const tasks = tasksData.tasks || [];
+    
+    // Contar por estado
+    const countByStatus = {};
+    tasks.forEach(t => {
+      const s = t.status?.status || 'Sin estado';
+      countByStatus[s] = (countByStatus[s] || 0) + 1;
+    });
+
+    res.json({
+      ok: true,
+      diagnostico: {
+        lista: listData.name,
+        id: listId,
+        estadosClickUp: (listData.statuses || []).map(s => s.status),
+        conteoPorEstado: countByStatus,
+        estadosConfigurados: ESTADOS_IMPL,
+        ignorarTareas: CONFIG.TAREAS_IGNORAR,
+        ignorarEstados: CONFIG.ESTADOS_IGNORAR,
+        totalTareasMuestra: tasks.length
+      }
+    });
+  } catch (e) {
+    console.error('❌ Error en diagnóstico ClickUp:', e.message);
+    res.status(500).json({ 
+      ok: false, 
+      error: e.message 
+    });
+  }
+});
+
+// ========== ENDPOINT 2: Traer clientes CON responsables ==========
+app.get('/api/clientes', auth, async (req, res) => {
+  try {
+    const { pais, estado, tipo, responsable } = req.query;
+    let tareas = await obtenerTareasClickUp();
+    // Filtrar tareas ignoradas
+    const filtradasGlobal = tareas.filter(t => !debeIgnorar(t));
+    const procesadas = filtradasGlobal.map(t => procesarTarea(t));
+    let filtradas = procesadas;
+    if (pais) filtradas = filtradas.filter(t => normalizeText(t.pais).includes(normalizeText(pais)));
+    if (estado) filtradas = filtradas.filter(t => normalizeText(t.estado).includes(normalizeText(estado)));
+    if (tipo) filtradas = filtradas.filter(t => t.tipo === tipo);
+    if (responsable) filtradas = filtradas.filter(t => [t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct, t.rVenta].some(r => normalizeText(r || '').includes(normalizeText(responsable))));
+    const clientes = filtradas.map(t => ({ id: t.id, nombre: t.nombre, estado: t.estado, status: t.status, statusType: t.statusType, pais: t.pais, plan: t.plan, tipo: t.tipo, dias: t.dImpl, url: t.url, responsables: { kickoff: t.rKickoff, verificacion: t.rVer, capacitacion: t.rCap, golive: t.rGoLive, activacion: t.rAct, vendedor: t.rVenta }, canales: t.canales, alerta: t.alerta, diasSinMovimiento: t.dSinMov, fechaCreacion: t.fInicioFmt, fechaActivacion: t.fActivacionFmt, fechaCancelacion: t.fCancelacionFmt, valorVenta: t.valorVenta }));
+    res.json({ ok: true, total: clientes.length, filtros: { pais, estado, tipo, responsable }, clientes });
+  } catch (e) {
+    console.error('Error en /api/clientes:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ========== ENDPOINT 3: Detalle de cliente ==========
+app.get('/api/clientes/:id', auth, async (req, res) => {
+  try {
+    const tareas = await obtenerTareasClickUp();
+    const tarea = tareas.find(t => t.id === req.params.id);
+    if (!tarea) return res.status(404).json({ error: 'Cliente no encontrado' });
+    const procesada = procesarTarea(tarea);
+    res.json({ ok: true, cliente: { id: procesada.id, nombre: procesada.nombre, estado: procesada.estado, status: procesada.status, url: procesada.url, datos: { pais: procesada.pais, plan: procesada.plan, tipo: procesada.tipo, diasImplementacion: procesada.dImpl, diasSinMovimiento: procesada.dSinMov, alerta: procesada.alerta }, responsables: { kickoff: procesada.rKickoff, verificacion: procesada.rVer, capacitacion: procesada.rCap, golive: procesada.rGoLive, activacion: procesada.rAct, vendedor: procesada.rVenta }, canales: procesada.canales, tecnica: { ip: procesada.ip, dominio: procesada.dominio, linkHola: procesada.linkHola, email: procesada.email, telefono: procesada.telefono }, capacitacion: { cantidad: procesada.cantCap, horas: procesada.hCap }, modulos: { cancelados: procesada.modCancelados, adicionados: procesada.modAdicionados }, fechas: { creacion: procesada.fInicioFmt, activacion: procesada.fActivacionFmt, cancelacion: procesada.fCancelacionFmt, ultimaActualizacion: new Date(procesada.fActualizado).toLocaleDateString('es-ES') }, comercial: { plan: procesada.plan, vendedor: procesada.rVenta, valorVenta: procesada.valorVenta, tipoImplementacion: procesada.tipo }, tags: procesada.tags, indicadores: { sinRequisitos: procesada.sinReq, pausada: procesada.pausada, esperandoCliente: procesada.espCli, morosidad: procesada.moro, upgradeEnCurso: procesada.upgImpl } } });
+  } catch (e) {
+    console.error('Error en /api/clientes/:id:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ========== ENDPOINT 4: Analytics ==========
+app.get('/api/analytics', auth, async (req, res) => {
+  try {
+    const { tipo = 'sector' } = req.query;
+    const tareas = await obtenerTareasClickUp();
+    const procesadas = tareas.map(t => procesarTarea(t));
+    let resultado = {};
+    if (tipo === 'sector') {
+      const porPais = {};
+      procesadas.forEach(t => {
+        const p = t.pais || 'No definido';
+        if (!porPais[p]) porPais[p] = { total: 0, activos: 0, enProceso: 0, cancelados: 0, dias: 0 };
+        porPais[p].total++;
+        if (t.statusType === 'activo') porPais[p].activos++;
+        if (t.statusType === 'impl') porPais[p].enProceso++;
+        if (t.statusType === 'cancelado') porPais[p].cancelados++;
+        porPais[p].dias += t.dImpl;
+      });
+      resultado = Object.entries(porPais).map(([pais, stats]) => ({ sector: pais, total: stats.total, completadas: stats.activos, enCurso: stats.enProceso, canceladas: stats.cancelados, promedioDias: stats.total > 0 ? (stats.dias / stats.total).toFixed(1) : 0, tasaExito: stats.total > 0 ? ((stats.activos / stats.total) * 100).toFixed(1) : 0 }));
+    } else if (tipo === 'implementacion') {
+      const porTipo = {};
+      procesadas.forEach(t => {
+        const tp = t.tipo || 'Desconocido';
+        if (!porTipo[tp]) porTipo[tp] = { total: 0, activos: 0, enProceso: 0, cancelados: 0, dias: 0 };
+        porTipo[tp].total++;
+        if (t.statusType === 'activo') porTipo[tp].activos++;
+        if (t.statusType === 'impl') porTipo[tp].enProceso++;
+        if (t.statusType === 'cancelado') porTipo[tp].cancelados++;
+        porTipo[tp].dias += t.dImpl;
+      });
+      resultado = Object.entries(porTipo).map(([tipo, stats]) => ({ tipo, total: stats.total, completadas: stats.activos, enCurso: stats.enProceso, canceladas: stats.cancelados, promedioDias: stats.total > 0 ? (stats.dias / stats.total).toFixed(1) : 0, tasaExito: stats.total > 0 ? ((stats.activos / stats.total) * 100).toFixed(1) : 0 }));
+    } else if (tipo === 'consultor') {
+      const porConsultor = {};
+      procesadas.forEach(t => {
+        [t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct].forEach(consultor => {
+          if (!consultor) return;
+          if (!porConsultor[consultor]) porConsultor[consultor] = { total: 0, activos: 0, enProceso: 0, cancelados: 0, etapas: 0 };
+          porConsultor[consultor].etapas++;
+        });
+      });
+      resultado = Object.entries(porConsultor).map(([consultor, stats]) => ({ consultor, etapasAsignadas: stats.etapas, clientesÚnicos: stats.total, completadas: stats.activos, enCurso: stats.enProceso, canceladas: stats.cancelados }));
+    }
+    res.json({ ok: true, tipo, datos: resultado });
+  } catch (e) {
+    console.error('Error en /api/analytics:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ========== ENDPOINT 5: Alertas ==========
+app.get('/api/alertas', auth, async (req, res) => {
+  try {
+    const { severidad = '' } = req.query;
+    const tareas = await obtenerTareasClickUp();
+    const procesadas = tareas.map(t => procesarTarea(t));
+    const alertas = [];
+    procesadas.forEach(t => {
+      if (t.dSinMov > 7 && t.statusType === 'impl') alertas.push({ id: t.id, tipo: 'SIN_MOVIMIENTO', severidad: 'MEDIA', cliente: t.nombre, mensaje: `Sin movimiento por ${t.dSinMov} días`, accion: 'Contactar responsable', url: t.url, responsable: t.rKickoff || t.rVer || 'N/A' });
+      if (t.dImpl > 20 && t.statusType === 'impl') alertas.push({ id: t.id, tipo: 'EXCEDIDA_META', severidad: 'ALTA', cliente: t.nombre, mensaje: `Implementación lleva ${t.dImpl} días (meta: 20)`, accion: 'Acelerar implementación', url: t.url, responsable: t.rKickoff || 'N/A' });
+      if (!t.rCap && t.estado.includes('capacitacion')) alertas.push({ id: t.id, tipo: 'SIN_RESPONSABLE', severidad: 'ALTA', cliente: t.nombre, mensaje: 'Sin capacitador asignado', accion: 'Asignar capacitador inmediatamente', url: t.url, responsable: 'Sin asignar' });
+      if (t.espCli === 'SÍ') alertas.push({ id: t.id, tipo: 'ESPERANDO_CLIENTE', severidad: 'BAJA', cliente: t.nombre, mensaje: 'Cliente esperando respuesta', accion: 'Dar seguimiento', url: t.url, responsable: t.rVenta || 'N/A' });
+      if (t.moro === 'SÍ') alertas.push({ id: t.id, tipo: 'MOROSIDAD', severidad: 'CRÍTICA', cliente: t.nombre, mensaje: 'Cliente con problemas de pago', accion: 'Contactar área administrativa', url: t.url, responsable: t.rVenta || 'N/A' });
+    });
+    let resultado = severidad ? alertas.filter(a => a.severidad === severidad) : alertas;
+    const orden = { 'CRÍTICA': 1, 'ALTA': 2, 'MEDIA': 3, 'BAJA': 4 };
+    resultado.sort((a, b) => orden[a.severidad] - orden[b.severidad]);
+    res.json({ ok: true, total: resultado.length, criticas: resultado.filter(a => a.severidad === 'CRÍTICA').length, altas: resultado.filter(a => a.severidad === 'ALTA').length, medias: resultado.filter(a => a.severidad === 'MEDIA').length, bajas: resultado.filter(a => a.severidad === 'BAJA').length, alertas: resultado });
+  } catch (e) {
+    console.error('Error en /api/alertas:', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ========== ENDPOINT 6 & 7: Complementos & Auditoria ==========
+const COMPLEMENTOS_FILE_VY = path.join(DATA_DIR, 'complementos.json');
+function leerComplementosVy() {
+  try { if (!fs.existsSync(COMPLEMENTOS_FILE_VY)) return {}; return JSON.parse(fs.readFileSync(COMPLEMENTOS_FILE_VY, 'utf8')); } catch (e) { return {}; }
+}
+function guardarComplementosVy(data) {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(COMPLEMENTOS_FILE_VY, JSON.stringify(data, null, 2));
+}
+app.get('/api/complementos/:clienteId', auth, async (req, res) => {
+  try {
+    const complementos = leerComplementosVy();
+    const dato = complementos[req.params.clienteId] || {};
+    res.json({ ok: true, complemento: { ...dato, desdeSheets: null } });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/complementos/:clienteId', auth, (req, res) => {
+  try {
+    const complementos = leerComplementosVy();
+    const { notas, contactoAdicional, informacionExtra, estadoLocal, prioridadLocal, tags } = req.body;
+    complementos[req.params.clienteId] = { clienteId: req.params.clienteId, notas: notas || '', contactoAdicional: contactoAdicional || '', informacionExtra: informacionExtra || {}, estadoLocal: estadoLocal || '', prioridadLocal: prioridadLocal || '', tags: Array.isArray(tags) ? tags : [], actualizadoEn: new Date().toISOString(), actualizadoPor: req.user.username };
+    guardarComplementosVy(complementos);
+    writeLog(req.user, 'COMPLEMENTO_ACTUALIZADO', { clienteId: req.params.clienteId, usuario: req.user.username });
+    res.json({ ok: true, complemento: complementos[req.params.clienteId] });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+app.get('/api/auditoria', auth, (req, res) => {
+  try {
+    if (req.user.role !== 'admin' && req.user.role !== 'manager') return res.status(403).json({ error: 'Acceso denegado' });
+    let logs = [];
+    try { if (fs.existsSync(LOGS_FILE)) logs = JSON.parse(fs.readFileSync(LOGS_FILE, 'utf8')); } catch (e) { logs = []; }
+    const { desde, hasta, usuario, tipo } = req.query;
+    let filtrados = logs;
+    if (desde) filtrados = filtrados.filter(l => new Date(l.timestamp).getTime() >= new Date(desde).getTime());
+    if (hasta) filtrados = filtrados.filter(l => new Date(l.timestamp).getTime() <= new Date(hasta).getTime());
+    if (usuario) filtrados = filtrados.filter(l => l.user === usuario);
+    if (tipo) filtrados = filtrados.filter(l => l.action === tipo);
+    res.json({ ok: true, total: filtrados.length, logs: filtrados.slice(0, 500) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ================================================================
+// ERROR HANDLER MIDDLEWARE - 🆕 GLOBAL
+// ================================================================
+app.use((err, req, res, next) => {
+  const timestamp = new Date().toISOString();
+  const requestId = `${timestamp}-${Math.random().toString(36).substr(2, 9)}`;
+  
+  // Logging
+  console.error(`[ERROR] ${requestId}`, {
+    method: req.method,
+    path: req.path,
+    status: err.status || 500,
+    message: err.message,
+    stack: err.stack
+  });
+  
+  // Escribir en audit log
+  writeLog(req.user, 'ERROR', {
+    requestId,
+    path: req.path,
+    method: req.method,
+    message: err.message,
+    code: err.code
+  });
+  
+  // Responder con error estructurado
+  const statusCode = err.statusCode || err.status || 500;
+  const errorCode = err.code || 'INTERNAL_ERROR';
+  
+  return res.status(statusCode).json({
+    error: err.message || 'Error interno del servidor',
+    code: errorCode,
+    requestId: requestId,
+    timestamp: timestamp,
+    details: process.env.NODE_ENV === 'development' ? { stack: err.stack } : undefined
+  });
+});
+
+// ================================================================
+// FASE 2: ENDPOINTS MEJORADOS - CRUD DE CLIENTES
+// ================================================================
+
+/**
+ * GET /api/clientes
+ * Obtener lista de clientes con filtros y paginación
+ */
+app.get('/api/clientes', auth, async (req, res, next) => {
+  try {
+    const { pais, estado, tipo, responsable, search, limit = '50', offset = '0' } = req.query;
+    
+    const parsedLimit = Math.min(parseInt(limit) || 50, 500);
+    const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+    
+    if (parsedLimit < 1) throw { status: 400, message: 'limit debe ser >= 1' };
+    if (parsedOffset < 0) throw { status: 400, message: 'offset debe ser >= 0' };
+    
+    let tareas = await obtenerTareasClickUp();
+    const procesadas = tareas.map(t => procesarTarea(t));
+    
+    let filtradas = procesadas;
+    
+    if (pais?.trim()) {
+      const paisNorm = pais.trim().toLowerCase();
+      filtradas = filtradas.filter(t => (t.pais || '').toLowerCase().includes(paisNorm));
+    }
+    
+    if (estado?.trim()) {
+      const estadoNorm = estado.trim().toLowerCase();
+      filtradas = filtradas.filter(t => (t.estado || '').toLowerCase().includes(estadoNorm));
+    }
+    
+    if (tipo && ['Implementación', 'Upgrade'].includes(tipo)) {
+      filtradas = filtradas.filter(t => t.tipo === tipo);
+    }
+    
+    if (responsable?.trim()) {
+      const respNorm = responsable.trim().toLowerCase();
+      filtradas = filtradas.filter(t => 
+        [t.rKickoff, t.rVer, t.rCap, t.rGoLive, t.rAct, t.rVenta]
+          .some(r => r && r.toLowerCase().includes(respNorm))
+      );
+    }
+    
+    if (search?.trim()) {
+      const searchNorm = search.trim().toLowerCase();
+      filtradas = filtradas.filter(t => (t.nombre || '').toLowerCase().includes(searchNorm));
+    }
+    
+    const total = filtradas.length;
+    const pages = Math.ceil(total / parsedLimit);
+    const page = Math.floor(parsedOffset / parsedLimit) + 1;
+    const clientes = filtradas.slice(parsedOffset, parsedOffset + parsedLimit).map(t => ({
+      id: t.id,
+      nombre: t.nombre,
+      estado: t.estado,
+      status: t.status,
+      pais: t.pais,
+      plan: t.plan,
+      tipo: t.tipo,
+      dias: t.dImpl,
+      url: t.url,
+      responsables: { kickoff: t.rKickoff, verificacion: t.rVer, capacitacion: t.rCap, golive: t.rGoLive, activacion: t.rAct, vendedor: t.rVenta },
+      canales: t.canales,
+      alerta: t.alerta,
+      diasSinMovimiento: t.dSinMov,
+      valorVenta: t.valorVenta
+    }));
+    
+    res.json({
+      ok: true,
+      data: clientes,
+      pagination: { total, pages, page, limit: parsedLimit, offset: parsedOffset },
+      filters: { pais, estado, tipo, responsable, search }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * GET /api/clientes/:id
+ * Obtener detalle completo de un cliente
+ */
+app.get('/api/clientes/:id', auth, async (req, res, next) => {
+  try {
+    const tareas = await obtenerTareasClickUp();
+    const tarea = tareas.find(t => t.id === req.params.id);
+    
+    if (!tarea) return res.status(404).json({ error: 'Cliente no encontrado' });
+    
+    const procesada = procesarTarea(tarea);
+    
+    res.json({
+      ok: true,
+      data: {
+        id: procesada.id,
+        nombre: procesada.nombre,
+        estado: procesada.estado,
+        status: procesada.status,
+        url: procesada.url,
+        datos: {
+          pais: procesada.pais,
+          plan: procesada.plan,
+          tipo: procesada.tipo,
+          diasImplementacion: procesada.dImpl,
+          diasSinMovimiento: procesada.dSinMov,
+          alerta: procesada.alerta
+        },
+        responsables: {
+          kickoff: procesada.rKickoff,
+          verificacion: procesada.rVer,
+          capacitacion: procesada.rCap,
+          golive: procesada.rGoLive,
+          activacion: procesada.rAct,
+          vendedor: procesada.rVenta
+        },
+        canales: procesada.canales,
+        tecnica: {
+          ip: procesada.ip,
+          dominio: procesada.dominio,
+          linkHola: procesada.linkHola,
+          email: procesada.email,
+          telefono: procesada.telefono
+        },
+        capacitacion: { cantidad: procesada.cantCap, horas: procesada.hCap },
+        modulos: { cancelados: procesada.modCancelados, adicionados: procesada.modAdicionados },
+        fechas: {
+          creacion: procesada.fInicioFmt,
+          activacion: procesada.fActivacionFmt,
+          cancelacion: procesada.fCancelacionFmt
+        },
+        comercial: {
+          plan: procesada.plan,
+          vendedor: procesada.rVenta,
+          valorVenta: procesada.valorVenta,
+          tipoImplementacion: procesada.tipo
+        },
+        tags: procesada.tags
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * POST /api/clientes/:id/comentario
+ * Agregar comentario a un cliente
+ */
+app.post('/api/clientes/:id/comentario', auth, async (req, res, next) => {
+  try {
+    const tareas = await obtenerTareasClickUp();
+    const tarea = tareas.find(t => t.id === req.params.id);
+    if (!tarea) return res.status(404).json({ error: 'Cliente no encontrado' });
+    
+    const { texto, tipo = 'general' } = req.body;
+    if (!texto || !texto.trim()) {
+      return res.status(400).json({ error: 'Texto requerido' });
+    }
+    
+    const comentariosFile = path.join(DATA_DIR, 'comentarios.json');
+    let comentarios = {};
+    
+    if (fs.existsSync(comentariosFile)) {
+      try {
+        comentarios = JSON.parse(fs.readFileSync(comentariosFile, 'utf8'));
+      } catch (e) {}
+    }
+    
+    if (!comentarios[req.params.id]) comentarios[req.params.id] = [];
+    
+    const comentario = {
+      id: Date.now(),
+      texto: texto.trim(),
+      tipo,
+      autor: req.user.username,
+      autorId: req.user.id,
+      createdAt: new Date().toISOString()
+    };
+    
+    comentarios[req.params.id].push(comentario);
+    
+    const dataDir = path.join(STATIC_ROOT, 'data');
+    if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+    fs.writeFileSync(comentariosFile, JSON.stringify(comentarios, null, 2));
+    
+    writeLog(req.user, 'COMENTARIO_AGREGADO', {
+      clienteId: req.params.id,
+      comentarioId: comentario.id,
+      tipo
+    });
+    
+    res.json({ ok: true, comentario });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * GET /api/clientes/:id/comentarios
+ * Obtener comentarios de un cliente
+ */
+app.get('/api/clientes/:id/comentarios', auth, async (req, res, next) => {
+  try {
+    const tareas = await obtenerTareasClickUp();
+    if (!tareas.find(t => t.id === req.params.id)) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+    
+    const comentariosFile = path.join(STATIC_ROOT, 'data', 'comentarios.json');
+    let comentarios = [];
+    
+    if (fs.existsSync(comentariosFile)) {
+      try {
+        const allComments = JSON.parse(fs.readFileSync(comentariosFile, 'utf8'));
+        comentarios = allComments[req.params.id] || [];
+      } catch (e) {}
+    }
+    
+    res.json({
+      ok: true,
+      data: comentarios.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ================================================================
+// FASE 2: ALERTAS
+// ================================================================
+
+/**
+ * GET /api/alertas
+ * Obtener alertas del sistema con filtros
+ */
+app.get('/api/alertas', auth, async (req, res, next) => {
+  try {
+    const { severidad, tipo, limit = '100', offset = '0' } = req.query;
+    const parsedLimit = Math.min(parseInt(limit) || 100, 1000);
+    const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+    
+    const tareas = await obtenerTareasClickUp();
+    const procesadas = tareas.map(t => procesarTarea(t));
+    
+    const alertas = [];
+    
+    procesadas.forEach(t => {
+      if (t.dSinMov > 7 && t.statusType === 'impl') {
+        alertas.push({
+          id: `${t.id}_sin_mov`,
+          clienteId: t.id,
+          tipo: 'SIN_MOVIMIENTO',
+          severidad: 'MEDIA',
+          cliente: t.nombre,
+          mensaje: `Sin movimiento por ${t.dSinMov} días`,
+          accion: 'Contactar responsable',
+          url: t.url
+        });
+      }
+      
+      if (t.dImpl > 20 && t.statusType === 'impl') {
+        alertas.push({
+          id: `${t.id}_excedida_meta`,
+          clienteId: t.id,
+          tipo: 'EXCEDIDA_META',
+          severidad: 'ALTA',
+          cliente: t.nombre,
+          mensaje: `Implementación lleva ${t.dImpl} días (meta: 20)`,
+          accion: 'Acelerar implementación',
+          url: t.url
+        });
+      }
+      
+      if (t.moro === 'SÍ') {
+        alertas.push({
+          id: `${t.id}_moro`,
+          clienteId: t.id,
+          tipo: 'MOROSIDAD',
+          severidad: 'CRITICA',
+          cliente: t.nombre,
+          mensaje: 'Cliente con problemas de pago',
+          accion: 'Contactar área administrativa',
+          url: t.url
+        });
+      }
+    });
+    
+    let resultado = alertas;
+    if (severidad && ['CRITICA', 'ALTA', 'MEDIA', 'BAJA'].includes(severidad)) {
+      resultado = resultado.filter(a => a.severidad === severidad);
+    }
+    if (tipo) {
+      resultado = resultado.filter(a => a.tipo === tipo);
+    }
+    
+    const orden = { CRITICA: 1, ALTA: 2, MEDIA: 3, BAJA: 4 };
+    resultado.sort((a, b) => orden[a.severidad] - orden[b.severidad]);
+    
+    const total = resultado.length;
+    const pages = Math.ceil(total / parsedLimit);
+    const data = resultado.slice(parsedOffset, parsedOffset + parsedLimit);
+    
+    res.json({
+      ok: true,
+      data,
+      pagination: { total, pages, limit: parsedLimit, offset: parsedOffset },
+      resumen: {
+        criticas: alertas.filter(a => a.severidad === 'CRITICA').length,
+        altas: alertas.filter(a => a.severidad === 'ALTA').length
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ================================================================
+// FASE 2: REPORTES
+// ================================================================
+
+/**
+ * GET /api/reportes/por-pais
+ */
+app.get('/api/reportes/por-pais', auth, async (req, res, next) => {
+  try {
+    const tareas = await obtenerTareasClickUp();
+    const procesadas = tareas.map(t => procesarTarea(t));
+    
+    const porPais = {};
+    procesadas.forEach(t => {
+      const p = t.pais || 'No definido';
+      if (!porPais[p]) {
+        porPais[p] = { total: 0, activos: 0, enProceso: 0, cancelados: 0, diasTotal: 0 };
+      }
+      porPais[p].total++;
+      porPais[p].diasTotal += t.dImpl;
+      if (t.status === 'Activo') porPais[p].activos++;
+      if (t.status === 'En Implementación') porPais[p].enProceso++;
+      if (t.status === 'Cancelado') porPais[p].cancelados++;
+    });
+    
+    const resultado = Object.entries(porPais).map(([pais, stats]) => ({
+      pais,
+      ...stats,
+      diasPromedio: stats.total > 0 ? (stats.diasTotal / stats.total).toFixed(1) : 0,
+      tasaExito: stats.total > 0 ? ((stats.activos / stats.total) * 100).toFixed(1) : 0
+    }));
+    
+    res.json({ ok: true, data: resultado });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * GET /api/reportes/por-tipo
+ */
+app.get('/api/reportes/por-tipo', auth, async (req, res, next) => {
+  try {
+    const tareas = await obtenerTareasClickUp();
+    const procesadas = tareas.map(t => procesarTarea(t));
+    
+    const porTipo = {};
+    procesadas.forEach(t => {
+      const tipo = t.tipo || 'Desconocido';
+      if (!porTipo[tipo]) {
+        porTipo[tipo] = { total: 0, activos: 0, enProceso: 0, cancelados: 0, diasTotal: 0 };
+      }
+      porTipo[tipo].total++;
+      porTipo[tipo].diasTotal += t.dImpl;
+      if (t.status === 'Activo') porTipo[tipo].activos++;
+      if (t.status === 'En Implementación') porTipo[tipo].enProceso++;
+      if (t.status === 'Cancelado') porTipo[tipo].cancelados++;
+    });
+    
+    const resultado = Object.entries(porTipo).map(([tipo, stats]) => ({
+      tipo,
+      ...stats,
+      diasPromedio: stats.total > 0 ? (stats.diasTotal / stats.total).toFixed(1) : 0,
+      tasaExito: stats.total > 0 ? ((stats.activos / stats.total) * 100).toFixed(1) : 0
+    }));
+    
+    res.json({ ok: true, data: resultado });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * GET /api/reportes/por-consultor
+ */
+app.get('/api/reportes/por-consultor', auth, async (req, res, next) => {
+  try {
+    const tareas = await obtenerTareasClickUp();
+    const procesadas = tareas.map(t => procesarTarea(t));
+    
+    const porConsultor = {};
+    procesadas.forEach(t => {
+      [
+        { name: t.rKickoff, role: 'Kickoff' },
+        { name: t.rVer, role: 'Verificación' },
+        { name: t.rCap, role: 'Capacitación' },
+        { name: t.rGoLive, role: 'Go-Live' },
+        { name: t.rAct, role: 'Activación' },
+        { name: t.rVenta, role: 'Vendedor' }
+      ].forEach(({ name, role }) => {
+        if (!name || !name.trim()) return;
+        
+        if (!porConsultor[name]) {
+          porConsultor[name] = {
+            nombre: name,
+            roles: new Set(),
+            clientesUnicos: new Set(),
+            activos: 0,
+            enProceso: 0,
+            etapas: 0
+          };
+        }
+        
+        porConsultor[name].roles.add(role);
+        porConsultor[name].clientesUnicos.add(t.id);
+        porConsultor[name].etapas++;
+        
+        if (t.status === 'Activo') porConsultor[name].activos++;
+        if (t.status === 'En Implementación') porConsultor[name].enProceso++;
+      });
+    });
+    
+    const resultado = Object.values(porConsultor)
+      .map(stats => ({
+        consultor: stats.nombre,
+        roles: Array.from(stats.roles),
+        clientesUnicos: stats.clientesUnicos.size,
+        activos: stats.activos,
+        enProceso: stats.enProceso,
+        etapasAsignadas: stats.etapas
+      }))
+      .sort((a, b) => b.clientesUnicos - a.clientesUnicos);
+    
+    res.json({ ok: true, data: resultado });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ================================================================
+// FASE 2: SINCRONIZACIÓN
+// ================================================================
+
+/**
+ * POST /api/sync/clickup
+ * - Dispara una sincronización server-side (mutex) y opcionalmente espera el resultado.
+ * - No obliga al frontend a pegarle directo a ClickUp (más liviano al entrar al sistema).
+ */
+app.post('/api/sync/clickup', auth, async (req, res) => {
+  const wait = String(req.query.wait || '').trim() === '1' || Boolean(req.body?.wait);
+  const force = (req.user?.role === 'admin') && (String(req.query.force || '').trim() === '1' || Boolean(req.body?.force));
+  const reason = `api:${req.user?.username || 'user'}`;
+
+  try {
+    const promise = runClickUpSync({ reason, force });
+
+    if (!wait) {
+      return res.json({
+        ok: true,
+        message: 'Sincronización encolada',
+        state: {
+          running: clickupSync.running,
+          lastSuccessAt: clickupSync.lastSuccessAt,
+          lastError: clickupSync.lastError,
+          lastReason: clickupSync.lastReason,
+          lastStats: clickupSync.lastStats
+        }
+      });
+    }
+
+    const timeoutMs = 25000;
+    const result = await Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout esperando sincronización')), timeoutMs))
+    ]).catch(e => ({ ok: false, error: e.message, timeout: true }));
+
+    return res.json({
+      ok: true,
+      result,
+      state: {
+        running: clickupSync.running,
+        lastSuccessAt: clickupSync.lastSuccessAt,
+        lastError: clickupSync.lastError,
+        lastReason: clickupSync.lastReason,
+        lastStats: clickupSync.lastStats
+      }
+    });
+  } catch (e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * POST /api/sync/start
+ */
+app.post('/api/sync/start', auth, async (req, res, next) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Permiso denegado' });
+    }
+    
+    setImmediate(async () => {
+      try {
+        const result = await runClickUpSync({ reason: `api:sync-start:${req.user.username}`, force: true });
+        if (result?.ok) {
+          writeLog(req.user, 'SYNC_COMPLETED', { ...result.meta });
+        } else {
+          writeLog(req.user, 'SYNC_FAILED', { error: result?.error || 'unknown' });
+        }
+      } catch (e) {
+        console.error('Sync error:', e);
+      }
+    });
+    
+    res.json({ ok: true, message: 'Sincronización iniciada' });
+  } catch (e) {
+    next(e);
+  }
+});
+
+/**
+ * GET /api/sync/status
+ */
+app.get('/api/sync/status', auth, (req, res, next) => {
+  try {
+    const syncFile = path.join(STATIC_ROOT, 'data', 'sync_complete.json');
+    let lastSync = null;
+    
+    if (fs.existsSync(syncFile)) {
+      try {
+        lastSync = JSON.parse(fs.readFileSync(syncFile, 'utf8'));
+      } catch (e) {}
+    }
+    
+    res.json({
+      ok: true,
+      data: {
+        lastSync,
+        status: lastSync ? 'OK' : 'NEVER_SYNCED',
+        clickup: {
+          running: clickupSync.running,
+          lastStartedAt: clickupSync.lastStartedAt,
+          lastFinishedAt: clickupSync.lastFinishedAt,
+          lastSuccessAt: clickupSync.lastSuccessAt,
+          lastError: clickupSync.lastError,
+          lastReason: clickupSync.lastReason,
+          lastStats: clickupSync.lastStats
+        }
+      }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ================================================================
+// FASE 2: AUDITORÍA
+// ================================================================
+
+/**
+ * GET /api/auditoria
+ */
+app.get('/api/auditoria', auth, async (req, res, next) => {
+  try {
+    if (!['admin', 'manager'].includes(req.user.role)) {
+      return res.status(403).json({ error: 'Permiso denegado' });
+    }
+    
+    const { desde, hasta, usuario, tipo, limit = '100', offset = '0' } = req.query;
+    const parsedLimit = Math.min(parseInt(limit) || 100, 500);
+    const parsedOffset = Math.max(parseInt(offset) || 0, 0);
+    
+    let logs = [];
+    const logsFile = path.join(STATIC_ROOT, 'audit_logs.json');
+    
+    if (fs.existsSync(logsFile)) {
+      try {
+        logs = JSON.parse(fs.readFileSync(logsFile, 'utf8'));
+      } catch (e) {}
+    }
+    
+    let filtrados = logs;
+    
+    if (desde) {
+      const desdeMs = new Date(desde).getTime();
+      filtrados = filtrados.filter(l => new Date(l.timestamp).getTime() >= desdeMs);
+    }
+    
+    if (hasta) {
+      const hastaMs = new Date(hasta).getTime();
+      filtrados = filtrados.filter(l => new Date(l.timestamp).getTime() <= hastaMs);
+    }
+    
+    if (usuario?.trim()) {
+      filtrados = filtrados.filter(l => (l.user || '').toLowerCase().includes(usuario.trim().toLowerCase()));
+    }
+    
+    if (tipo?.trim()) {
+      filtrados = filtrados.filter(l => l.action === tipo.trim());
+    }
+    
+    filtrados.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    const total = filtrados.length;
+    const pages = Math.ceil(total / parsedLimit);
+    const data = filtrados.slice(parsedOffset, parsedOffset + parsedLimit);
+    
+    res.json({
+      ok: true,
+      data,
+      pagination: { total, pages, limit: parsedLimit, offset: parsedOffset }
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // ================================================================
 // CATCH-ALL → SPA
 // ================================================================
 app.get('*', (_req, res) => {
+  // Prevent browser caching of the main HTML entry.
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   res.sendFile(MAIN_HTML);
 });
 
@@ -3490,6 +5076,29 @@ ensureDataDir();
 app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
   console.log(`🔑 JWT_SECRET: ${CONFIG.JWT_SECRET ? 'Cargado CORRECTAMENTE' : 'ERROR: NO CARGADO'}`);
-  console.log(`🔑 ClickUp List: ${CONFIG.CLICKUP_LIST_ID || 'no configurada'}`);
+  
+  // Obtener List ID activo (prefiere global_config sobre env)
+  let activeListId = 'no configurada';
+  try {
+    activeListId = getClickUpListId();
+  } catch (_e) {}
+  
+  console.log(`🔑 ClickUp List Activa: ${activeListId}`);
   console.log(`💾 Cache TTL: ${process.env.CACHE_TTL || 3600}s`);
+
+  // 🚀 Iniciar sincronización programada (cada 30 min) sin bloquear el login de los usuarios
+  iniciarBackgroundSync();
 });
+
+async function iniciarBackgroundSync() {
+  console.log(`🔄 Background Sync: Inicializado (intervalo: ${Math.round(CLICKUP_SYNC_INTERVAL_MS / 60000)} min)`);
+
+  // Primera ejecución (con delay) para no impactar el arranque
+  setTimeout(() => {
+    runClickUpSync({ reason: 'startup', force: false }).catch(() => {});
+  }, 15000);
+
+  setInterval(() => {
+    runClickUpSync({ reason: 'scheduler', force: false }).catch(() => {});
+  }, CLICKUP_SYNC_INTERVAL_MS);
+}

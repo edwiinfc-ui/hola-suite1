@@ -57,3 +57,9 @@ dist
 # Backup files
 *.bak
 *.backup
+
+# App-generated JSON (runtime state)
+audit_logs.json
+kanbans.json
+sales_config.json
+data/*.json

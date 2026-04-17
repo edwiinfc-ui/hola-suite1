@@ -137,6 +137,8 @@ input, select, textarea, button { font: inherit; }
     padding: 8px 10px;
     gap: 4px;
     overflow-x: auto;
+    position: static;
+    top: auto;
   }
 
   .date-filter-label {
@@ -263,6 +265,15 @@ input, select, textarea, button { font: inherit; }
   .modal {
     width: 95%;
     padding: 16px;
+    max-height: calc(100dvh - 24px);
+    overflow-y: auto;
+  }
+
+  /* Formularios públicos / modales generados */
+  .modal-content {
+    width: 95% !important;
+    max-height: calc(100dvh - 24px);
+    overflow: auto;
   }
 
   .modal-title {

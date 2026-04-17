@@ -9,7 +9,8 @@ const DEFAULT_CONFIG = {
   FERIADOS: {},
   TAREAS_IGNORAR: [],
   ESTADOS_IGNORAR: [],
-  ESTADOS_IMPL: []
+  ESTADOS_IMPL: [],
+  CONSULTORES: {} // Mapa dinámico de consultores desde global_config
 };
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -26,7 +27,6 @@ function fmtFecha(date, tz = 'UTC') {
   if (!date) return '';
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return '';
-  // Mantener el formato dd/MM/yyyy del Apps Script
   return new Intl.DateTimeFormat('es-ES', {
     timeZone: tz,
     day: '2-digit',
@@ -77,13 +77,20 @@ function computeTasksFingerprint(tasks) {
   return crypto.createHash('sha256').update(json).digest('hex');
 }
 
+/**
+ * Buscar el mejor campo personalizado que coincida con uno de los nombres dados.
+ * Estrategia: exacto (3) > empieza con (2) > contiene (1)
+ */
 function findCustomField(cf, names) {
+  if (!Array.isArray(cf) || !cf.length) return undefined;
   const normalizedNames = names.map(normalizeText);
   let bestMatch = null;
 
-  (cf || []).forEach(field => {
+  cf.forEach(field => {
+    if (!field) return;
     const fieldName = normalizeText(field?.name);
     normalizedNames.forEach(name => {
+      if (!name) return;
       const exactScore = fieldName === name ? 3 : 0;
       const startsWithScore = !exactScore && fieldName.startsWith(name) ? 2 : 0;
       const includesScore = !exactScore && !startsWithScore && fieldName.includes(name) ? 1 : 0;
@@ -95,20 +102,33 @@ function findCustomField(cf, names) {
   return bestMatch ? bestMatch.field : undefined;
 }
 
+/**
+ * Obtener el valor de un campo personalizado con manejo robusto de tipos
+ */
 function getCampo(cf, nom, tipo) {
-  const f = (cf || []).find(x => String(x?.name || '').toLowerCase().includes(String(nom || '').toLowerCase()));
+  const f = findCustomField(cf || [], [nom]);
   if (!f) return tipo === 'number' ? 0 : '';
 
   try {
     switch (tipo) {
       case 'number':
         return parseFloat(f.value) || 0;
-      case 'date':
-        return f.value ? parseInt(f.value, 10) : null;
+      case 'date': {
+        if (!f.value && f.value !== 0) return null;
+        const ms = parseInt(String(f.value), 10);
+        return Number.isNaN(ms) ? null : ms;
+      }
       case 'dropdown': {
-        if (!f.value && f.value !== 0) return '';
+        if (f.value === null || f.value === undefined) return '';
         if (f.type_config?.options) {
-          const o = f.type_config.options.find(x => x.orderindex === parseInt(f.value, 10) || x.id === f.value);
+          // Buscar por id primero, luego por orderindex
+          const valStr = String(f.value);
+          const valInt = parseInt(valStr, 10);
+          const o = f.type_config.options.find(x =>
+            x.id === valStr ||
+            (!Number.isNaN(valInt) && x.orderindex === valInt) ||
+            x.name === valStr || x.label === valStr
+          );
           return o ? (o.name || o.label || '') : '';
         }
         return String(f.value);
@@ -118,7 +138,11 @@ function getCampo(cf, nom, tipo) {
         if (!f.value && f.value !== 0) return '';
         if (typeof f.value === 'string') return f.value.trim();
         if (f.type_config?.options) {
-          const o = f.type_config.options.find(x => x.orderindex === parseInt(f.value, 10) || x.id === f.value);
+          const valStr = String(f.value);
+          const valInt = parseInt(valStr, 10);
+          const o = f.type_config.options.find(x =>
+            x.id === valStr || (!Number.isNaN(valInt) && x.orderindex === valInt)
+          );
           return o ? (o.name || o.label || '') : '';
         }
         return String(f.value);
@@ -133,16 +157,17 @@ function getCampo(cf, nom, tipo) {
 }
 
 function getPais(cf, cfg) {
-  const f = (cf || []).find(x => {
-    const nombreCampo = String(x?.name || '').toLowerCase().trim();
-    return nombreCampo === 'país' || nombreCampo === 'pais';
-  });
+  const f = findCustomField(cf || [], ['país', 'pais', 'country', 'pais de origem']);
   if (!f) return '';
-  if (!f.value && f.value !== 0) return '';
+  if (f.value === null || f.value === undefined) return '';
 
   try {
     if (f.type_config?.options) {
-      const o = f.type_config.options.find(x => x.orderindex === parseInt(f.value, 10) || x.id === f.value);
+      const valStr = String(f.value);
+      const valInt = parseInt(valStr, 10);
+      const o = f.type_config.options.find(x =>
+        x.id === valStr || (!Number.isNaN(valInt) && x.orderindex === valInt)
+      );
       if (o?.name) {
         const pn = normalizeText(o.name);
         const mapped = cfg.PAISES?.[pn];
@@ -160,14 +185,22 @@ function getPais(cf, cfg) {
   return '';
 }
 
+/**
+ * Obtener valor del campo Plan con búsqueda ampliada
+ */
 function getPlan(cf) {
-  const f = (cf || []).find(x => String(x?.name || '').toLowerCase().trim() === 'plan');
+  // Buscar por múltiples nombres posibles del campo plan
+  const f = findCustomField(cf || [], ['plan', 'tipo de plan', 'plano', 'plan contratado', 'plan de servicio']);
   if (!f) return '';
-  if (!f.value && f.value !== 0) return '';
+  if (f.value === null || f.value === undefined) return '';
 
   try {
     if (f.type_config?.options) {
-      const o = f.type_config.options.find(x => x.orderindex === parseInt(f.value, 10) || x.id === f.value);
+      const valStr = String(f.value);
+      const valInt = parseInt(valStr, 10);
+      const o = f.type_config.options.find(x =>
+        x.id === valStr || (!Number.isNaN(valInt) && x.orderindex === valInt)
+      );
       const planValue = (o?.name || o?.label || '').trim();
       if (planValue && planValue.length >= 2) return planValue;
     }
@@ -185,6 +218,7 @@ function diasHab(ini, fin, p, cfg, tz = 'UTC') {
   let d = 0;
   let a = new Date(ini);
   const f = new Date(fin);
+  if (Number.isNaN(a.getTime()) || Number.isNaN(f.getTime())) return 0;
   const fer = cfg.FERIADOS?.[p] || [];
 
   while (a <= f) {
@@ -198,10 +232,34 @@ function diasHab(ini, fin, p, cfg, tz = 'UTC') {
   return d;
 }
 
-function normCons(n) {
+/**
+ * Normalizar nombre de consultor de forma DINÁMICA usando el mapa del config.
+ * Primero busca en cfg.CONSULTORES (de global_config.json), luego en el mapa hardcodeado de fallback.
+ */
+function normCons(n, cfg) {
   if (!n || n === 'N/A' || n === '' || n === '-') return '';
   const l = String(n || '').toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
+  // 1. Buscar en el mapa dinámico de CONSULTORES (global_config.json)
+  if (cfg && cfg.CONSULTORES && typeof cfg.CONSULTORES === 'object') {
+    // Búsqueda exacta
+    for (const [key, value] of Object.entries(cfg.CONSULTORES)) {
+      const keyNorm = normalizeText(key);
+      if (keyNorm === l) return value;
+    }
+    // Búsqueda parcial (la entrada contiene el input)
+    for (const [key, value] of Object.entries(cfg.CONSULTORES)) {
+      const keyNorm = normalizeText(key);
+      if (l.includes(keyNorm) && keyNorm.length >= 4) return value;
+    }
+    // Búsqueda inversa (el input contiene la entrada)
+    for (const [key, value] of Object.entries(cfg.CONSULTORES)) {
+      const keyNorm = normalizeText(key);
+      if (keyNorm.includes(l) && l.length >= 4) return value;
+    }
+  }
+
+  // 2. Fallback: mapa hardcodeado para los consultores principales conocidos
   const consultoresMap = {
     'edwin leonardo franco campos': 'Edwin Franco',
     'edwin franco campos': 'Edwin Franco',
@@ -211,47 +269,50 @@ function normCons(n) {
     'edwin l franco': 'Edwin Franco',
     'edwin franco': 'Edwin Franco',
     'franco edwin': 'Edwin Franco',
-    'edwin': 'Edwin Franco',
-    'franco': 'Edwin Franco',
     'e. franco': 'Edwin Franco',
     'edwin f': 'Edwin Franco',
     'e franco': 'Edwin Franco',
 
     'alejandro jose zambrano': 'Alejandro Zambrano',
-    'alejandro josé zambrano': 'Alejandro Zambrano',
+    'alejandro jose zambrano': 'Alejandro Zambrano',
     'alejandro j zambrano': 'Alejandro Zambrano',
     'alejandro j. zambrano': 'Alejandro Zambrano',
     'alejandro zambrano': 'Alejandro Zambrano',
     'zambrano alejandro': 'Alejandro Zambrano',
-    'alejandro': 'Alejandro Zambrano',
-    'zambrano': 'Alejandro Zambrano',
     'alex zambrano': 'Alejandro Zambrano',
     'a. zambrano': 'Alejandro Zambrano',
     'a zambrano': 'Alejandro Zambrano',
 
     'mariane aparecida telo': 'Mariane Teló',
-    'mariane aparecida télo': 'Mariane Teló',
+    'mariane aparecida telo': 'Mariane Teló',
     'mariane a telo': 'Mariane Teló',
     'mariane a. telo': 'Mariane Teló',
     'mariane telo': 'Mariane Teló',
-    'mariane télo': 'Mariane Teló',
+    'mariane telo': 'Mariane Teló',
     'telo mariane': 'Mariane Teló',
-    'mariane': 'Mariane Teló',
-    'telo': 'Mariane Teló',
     'mari telo': 'Mariane Teló',
-    'mari': 'Mariane Teló',
     'mariane t': 'Mariane Teló',
     'm. telo': 'Mariane Teló',
-    'm telo': 'Mariane Teló'
+    'm telo': 'Mariane Teló',
+
+    'blitzangel leon': 'Blitzangel Leon',
+    'blitz': 'Blitzangel Leon',
+
+    'bruno gabriel rodrigues': 'Bruno Gabriel Rodrigues',
+    'bruno gabriel': 'Bruno Gabriel Rodrigues',
+    'bruno rodrigues': 'Bruno Gabriel Rodrigues',
+    'bruno g. rodrigues': 'Bruno Gabriel Rodrigues',
   };
 
   if (consultoresMap[l]) return consultoresMap[l];
   for (const [key, value] of Object.entries(consultoresMap)) {
-    if (l.includes(key)) return value;
+    if (l.includes(key) && key.length >= 4) return value;
   }
   for (const [key, value] of Object.entries(consultoresMap)) {
     if (key.includes(l) && l.length >= 4) return value;
   }
+
+  // 3. Ninguna coincidencia: retornar vacío (no inventar)
   return '';
 }
 
@@ -262,10 +323,7 @@ function debeIgnorarTarea(tarea, cfg) {
 
 function debeIgnorarPorEstado(tarea, cfg) {
   const status = String(tarea?.status?.status || '').toLowerCase();
-  
-  // Si no hay lista de estados a ignorar, no ignoramos nada por estado
   if (!cfg.ESTADOS_IGNORAR || cfg.ESTADOS_IGNORAR.length === 0) return false;
-  
   return cfg.ESTADOS_IGNORAR.some(e => {
     if (!e) return false;
     const ign = String(e).toLowerCase();
@@ -295,7 +353,7 @@ function buscarResponsable(cf, terminos) {
   });
 
   for (const termino of terminosExtendidos) {
-    const campo = (cf || []).find(x => String(x?.name || '').toLowerCase().includes(String(termino || '').toLowerCase()));
+    const campo = findCustomField(cf || [], [termino]);
     if (!campo || !campo.value) continue;
 
     if (Array.isArray(campo.value) && campo.value.length > 0) {
@@ -310,8 +368,12 @@ function buscarResponsable(cf, terminos) {
       if (valorLimpio && valorLimpio.length > 2) return [valorLimpio];
     }
 
-    if (campo.type_config?.options && (campo.value || campo.value === 0)) {
-      const opcion = campo.type_config.options.find(opt => opt.orderindex === parseInt(campo.value, 10) || opt.id === campo.value);
+    if (campo.type_config?.options && (campo.value !== null && campo.value !== undefined)) {
+      const valStr = String(campo.value);
+      const valInt = parseInt(valStr, 10);
+      const opcion = campo.type_config.options.find(opt =>
+        opt.id === valStr || (!Number.isNaN(valInt) && opt.orderindex === valInt)
+      );
       if (opcion && (opcion.name || opcion.label)) {
         const nombreOpcion = (opcion.name || opcion.label).trim();
         if (nombreOpcion && nombreOpcion.length > 2) return [nombreOpcion];
@@ -322,11 +384,11 @@ function buscarResponsable(cf, terminos) {
   return [];
 }
 
-function procesarResponsable(array) {
+function procesarResponsable(array, cfg) {
   if (!array || array.length === 0) return '';
   const primero = array[0];
   if (!esNombreValido(primero)) return '';
-  const normConsultor = normCons(primero);
+  const normConsultor = normCons(primero, cfg);
   return normConsultor !== '' ? normConsultor : limpiarNombre(primero);
 }
 
@@ -341,7 +403,11 @@ function obtenerHistorialEstadosActualizadoFromDetails(taskDetails, cfg, tz = 'U
       };
     }
 
-    const sorted = [...history].sort((a, b) => parseInt(a.date, 10) - parseInt(b.date, 10));
+    const sorted = [...history].sort((a, b) => {
+      const da = parseInt(String(a.date || '0'), 10);
+      const db = parseInt(String(b.date || '0'), 10);
+      return da - db;
+    });
     let etapaAnterior = 'Creado';
     if (sorted.length >= 2) etapaAnterior = sorted[sorted.length - 2].status || 'N/A';
 
@@ -351,8 +417,12 @@ function obtenerHistorialEstadosActualizadoFromDetails(taskDetails, cfg, tz = 'U
 
     for (let i = 0; i < sorted.length; i++) {
       const estado = String(sorted[i]?.status || '').toLowerCase();
-      const fechaInicio = new Date(parseInt(sorted[i]?.date, 10));
-      const fechaFin = i < sorted.length - 1 ? new Date(parseInt(sorted[i + 1]?.date, 10)) : new Date();
+      const tsInicio = parseInt(String(sorted[i]?.date || '0'), 10);
+      const tsFin = i < sorted.length - 1
+        ? parseInt(String(sorted[i + 1]?.date || '0'), 10)
+        : Date.now();
+      const fechaInicio = new Date(tsInicio);
+      const fechaFin = new Date(tsFin);
       const dias = diasHab(fechaInicio, fechaFin, pais, cfg, tz);
 
       if (estado.includes('kickoff') || estado.includes('onboarding')) diasPorEtapa.kickoff += dias;
@@ -383,8 +453,9 @@ function buscarFechaConcluidoFromDetails(taskDetails) {
     for (let i = history.length - 1; i >= 0; i--) {
       const h = history[i];
       const estadoLower = String(h?.status || '').toLowerCase();
-      if ((estadoLower.includes('conclu') || estadoLower === 'closed') && h?.date) {
-        return new Date(parseInt(h.date, 10));
+      if ((estadoLower.includes('conclu') || estadoLower === 'closed' || estadoLower === 'cerrado') && h?.date) {
+        const ts = parseInt(String(h.date), 10);
+        if (!Number.isNaN(ts)) return new Date(ts);
       }
     }
     return null;
@@ -393,34 +464,101 @@ function buscarFechaConcluidoFromDetails(taskDetails) {
   }
 }
 
+/**
+ * Extraer todos los custom fields como raw para diagnóstico/debug
+ */
+function extractAllCustomFieldsRaw(task) {
+  const cf = Array.isArray(task?.custom_fields) ? task.custom_fields : [];
+  return cf.map(f => ({
+    id: f.id,
+    name: f.name,
+    type: f.type,
+    value: f.value,
+    hasOptions: Boolean(f.type_config?.options?.length),
+    optionCount: f.type_config?.options?.length || 0
+  }));
+}
+
+/**
+ * Detectar tipo de implementación de forma robusta.
+ * Busca el campo por nombre, luego intenta interpretar el valor como:
+ *   - Índice 1 / nombre "upgrade" / tag "upgrade"
+ */
+function detectarTipoImpl(cf, tagsStr) {
+  const tipoF = findCustomField(cf || [], ['tipo de implementación', 'tipo de implementacion', 'tipo impl', 'type']);
+  if (tipoF) {
+    const val = tipoF.value;
+    if (val !== null && val !== undefined) {
+      // Puede ser: '1', 1, 'upgrade', nombre de opción
+      const valStr = String(val).toLowerCase();
+      if (valStr === '1' || valStr.includes('upgrade')) return 'Upgrade';
+      // Buscar en opciones
+      if (tipoF.type_config?.options) {
+        const valInt = parseInt(String(val), 10);
+        const o = tipoF.type_config.options.find(x =>
+          x.id === String(val) ||
+          (!Number.isNaN(valInt) && x.orderindex === valInt) ||
+          x.name?.toLowerCase().includes('upgrade') ||
+          x.label?.toLowerCase().includes('upgrade')
+        );
+        if (o && (o.name || o.label || '').toLowerCase().includes('upgrade')) return 'Upgrade';
+      }
+    }
+  }
+  // Fallback a tags
+  if (tagsStr && tagsStr.includes('upgrade')) return 'Upgrade';
+  return 'Implementación';
+}
+
 async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
   const cf = t.custom_fields || [];
   const tz = ctx?.tz || 'UTC';
   const ahora = new Date();
-  const creado = new Date(parseInt(t.date_created, 10));
-  const actualizado = new Date(parseInt(t.date_updated, 10));
-  const cerrado = t.date_closed ? new Date(parseInt(t.date_closed, 10)) : null;
+  const creado = new Date(parseInt(String(t.date_created || '0'), 10));
+  const actualizado = new Date(parseInt(String(t.date_updated || '0'), 10));
+  const cerrado = t.date_closed ? new Date(parseInt(String(t.date_closed), 10)) : null;
 
   const id = t.id;
   const nombre = t.name;
   const link = t.url;
-  const estado = t.status.status;
+  const estado = t.status?.status || '';
   const eLower = String(estado || '').toLowerCase();
-
-  let fInicioKickoff = getCampo(cf, 'Fecha Inicio Kickoff', 'date');
-  if (!fInicioKickoff) fInicioKickoff = getCampo(cf, 'Fecha Inicio Onboarding', 'date');
-  const fInicio = fInicioKickoff ? new Date(fInicioKickoff) : creado;
-
-  let fActiv = null;
-  let fCanc = null;
-  let fConcluido = null;
 
   const esConcluido = eLower.includes('conclu') || eLower === 'closed' || eLower === 'cerrado';
   const esCancelado = eLower === 'cancelado';
 
+  let fInicio = ctx?.cachedFInicio ? new Date(ctx.cachedFInicio) : creado;
+  let fActiv = null;
+  let fConcluido = null;
+  let fCanc = null;
+
   let taskDetails = null;
-  if (typeof ctx?.fetchTaskDetails === 'function') {
-    taskDetails = await ctx.fetchTaskDetails(id);
+  // Solo buscar detalles si NO tenemos fecha de inicio cacheada O si es una tarea que requiere análisis profundo (concluida/cancelada)
+  if (typeof ctx?.fetchTaskDetails === 'function' && (!ctx.cachedFInicio || esConcluido || esCancelado)) {
+    try {
+      taskDetails = await ctx.fetchTaskDetails(id);
+    } catch (_e) {
+      taskDetails = null;
+    }
+  }
+
+  // Si tenemos detalles y NO tenemos fInicio cacheada, buscarla en la historia
+  if (taskDetails && !ctx.cachedFInicio && Array.isArray(taskDetails.status_history)) {
+    const sortedHistory = [...taskDetails.status_history].sort((a, b) => parseInt(a.date) - parseInt(b.date));
+    const firstImplStatus = sortedHistory.find(h => {
+      const s = String(h.status || '').toLowerCase();
+      return ESTADOS_IMPL.some(ei => s.includes(ei) && !s.includes('cerrado') && !s.includes('concluido'));
+    });
+    if (firstImplStatus) {
+      fInicio = new Date(parseInt(firstImplStatus.date));
+    }
+  }
+
+  // Si no se encontró por historial, intentar por campos personalizados específicos
+  if (!fInicio || fInicio.getTime() === creado.getTime()) {
+    let fInicioKickoff = getCampo(cf, 'Fecha Inicio Kickoff', 'date');
+    if (!fInicioKickoff) fInicioKickoff = getCampo(cf, 'Fecha Inicio Onboarding', 'date');
+    if (fInicioKickoff) fInicio = new Date(fInicioKickoff);
   }
 
   if (esConcluido) {
@@ -467,37 +605,25 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
   if (logs.length === 0) logs.push(String(estado || '').substring(0, 10));
 
   const rKickoffArray = buscarResponsable(cf, [
-    'responsable por el kickoff',
-    'responsable kickoff',
-    'responsable por el kick',
-    'responsable onboarding',
-    'responsable por el onboarding'
+    'responsable por el kickoff', 'responsable kickoff',
+    'responsable por el kick', 'responsable onboarding', 'responsable por el onboarding'
   ]);
   const rVerArray = buscarResponsable(cf, [
-    'responsable por el análisis',
-    'responsable por el analisis',
-    'responsable por verificación',
-    'responsable por verificacion',
-    'responsable verificación',
-    'responsable verificacion'
+    'responsable por el análisis', 'responsable por el analisis',
+    'responsable por verificación', 'responsable por verificacion',
+    'responsable verificación', 'responsable verificacion'
   ]);
   const rCapArray = buscarResponsable(cf, [
-    'responsable por capacitación',
-    'responsable por capacitacion',
-    'responsable capacitación',
-    'responsable capacitacion'
+    'responsable por capacitación', 'responsable por capacitacion',
+    'responsable capacitación', 'responsable capacitacion'
   ]);
   const rGoLiveArray = buscarResponsable(cf, [
-    'responsable por el go-live',
-    'responsable por el go live',
-    'responsable go-live',
-    'responsable go live'
+    'responsable por el go-live', 'responsable por el go live',
+    'responsable go-live', 'responsable go live'
   ]);
   const rActArray = buscarResponsable(cf, [
-    'responsable por la activación',
-    'responsable por la activacion',
-    'responsable activación',
-    'responsable activacion'
+    'responsable por la activación', 'responsable por la activacion',
+    'responsable activación', 'responsable activacion'
   ]);
   const rPBXArray = buscarResponsable(cf, ['resposable por pbx', 'responsable pbx']);
   const rFacArray = buscarResponsable(cf, ['responsable facturación', 'responsable facturacion']);
@@ -505,13 +631,13 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
 
   let fuente = 'ClickUp';
 
-  let rKickoff = procesarResponsable(rKickoffArray);
-  let rVer = procesarResponsable(rVerArray);
-  let rGoLive = procesarResponsable(rGoLiveArray);
-  let rAct = procesarResponsable(rActArray);
+  let rKickoff = procesarResponsable(rKickoffArray, cfg);
+  let rVer = procesarResponsable(rVerArray, cfg);
+  let rGoLive = procesarResponsable(rGoLiveArray, cfg);
+  let rAct = procesarResponsable(rActArray, cfg);
   let rPBX = rPBXArray.length > 0 ? rPBXArray.map(n => limpiarNombre(n)).join(', ') : '';
-  let rFac = procesarResponsable(rFacArray);
-  let rCom = procesarResponsable(rComArray);
+  let rFac = procesarResponsable(rFacArray, cfg);
+  let rCom = procesarResponsable(rComArray, cfg);
 
   let rCap = '';
   let rCap2 = '';
@@ -519,8 +645,8 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
   let capR2 = 0;
 
   let cantCap = getCampo(cf, 'cantidad de capacitaciones', 'number') || 0;
-  const capR1Field = (cf || []).find(x => String(x?.name || '').toLowerCase().includes('cantidad de capacitaciones r1'));
-  const capR2Field = (cf || []).find(x => String(x?.name || '').toLowerCase().includes('cantidad de capacitaciones r2'));
+  const capR1Field = findCustomField(cf, ['cantidad de capacitaciones r1']);
+  const capR2Field = findCustomField(cf, ['cantidad de capacitaciones r2']);
   if (capR1Field?.value) capR1 = parseFloat(capR1Field.value) || 0;
   if (capR2Field?.value) capR2 = parseFloat(capR2Field.value) || 0;
 
@@ -528,7 +654,7 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
     const consultoresValidos = rCapArray
       .filter(n => esNombreValido(n))
       .map(n => {
-        const normConsultor = normCons(n);
+        const normConsultor = normCons(n, cfg);
         return normConsultor !== '' ? normConsultor : limpiarNombre(n);
       })
       .filter(n => n !== '');
@@ -566,10 +692,10 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
   if ((!ipPrimaria && !dominioPrincipal) && ctx?.domData) {
     const backup = buscarDomIPExacto(nombre, ctx.domData);
     if (backup) {
-      if (!ipPrimaria) ipPrimaria = backup.ip || backup.ipPrimaria;
-      if (!ipSecundaria) ipSecundaria = backup.ipSecundaria;
-      if (!dominioPrincipal) dominioPrincipal = backup.dominio || backup.dominioPrincipal;
-      if (!dominio2) dominio2 = backup.dominio2;
+      if (!ipPrimaria) ipPrimaria = backup.ip || backup.ipPrimaria || '';
+      if (!ipSecundaria) ipSecundaria = backup.ipSecundaria || '';
+      if (!dominioPrincipal) dominioPrincipal = backup.dominio || backup.dominioPrincipal || '';
+      if (!dominio2) dominio2 = backup.dominio2 || '';
     }
   }
 
@@ -626,33 +752,30 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
   if (rGoLive || esConcluido) hGoLive = 1;
   if (dActTotal > 0 || esConcluido) hAct = 1;
 
-  function buscarCampo(terminos, tipo = 'text') {
-    for (const termino of terminos) {
-      const campo = (cf || []).find(x => String(x?.name || '').toLowerCase().includes(String(termino || '').toLowerCase()));
-      if (!campo) continue;
-      switch (tipo) {
-        case 'number':
-          return parseFloat(campo.value) || 0;
-        case 'dropdown': {
-          if (!campo.value && campo.value !== 0) return '';
-          if (campo.type_config?.options) {
-            const opcion = campo.type_config.options.find(x => x.orderindex === parseInt(campo.value, 10));
-            return opcion ? opcion.name : '';
-          }
-          return '';
-        }
-        default:
-          return campo.value ? String(campo.value) : '';
+  function buscarCampoLocal(terminos, tipo = 'text') {
+    const f2 = findCustomField(cf || [], terminos);
+    if (!f2) return tipo === 'number' ? 0 : '';
+    if (tipo === 'number') return parseFloat(f2.value) || 0;
+    if (tipo === 'dropdown') {
+      if (!f2.value && f2.value !== 0) return '';
+      if (f2.type_config?.options) {
+        const valStr = String(f2.value);
+        const valInt = parseInt(valStr, 10);
+        const opcion = f2.type_config.options.find(x =>
+          x.id === valStr || (!Number.isNaN(valInt) && x.orderindex === valInt)
+        );
+        return opcion ? (opcion.name || opcion.label || '') : '';
       }
+      return '';
     }
-    return tipo === 'number' ? 0 : '';
+    return f2.value ? String(f2.value) : '';
   }
 
-  const mesICap = buscarCampo(['mes de inicio capacit'], 'dropdown');
-  const mesFCap = buscarCampo(['mes de finalización ca', 'mes fin capacit'], 'dropdown');
+  const mesICap = buscarCampoLocal(['mes de inicio capacit'], 'dropdown');
+  const mesFCap = buscarCampoLocal(['mes de finalización ca', 'mes fin capacit'], 'dropdown');
   let mesAct = '';
-  const reunCap = buscarCampo(['cantidad de reuniones'], 'number');
-  const hCap = buscarCampo(['horas de capacitación', 'cantidad de horas'], 'number');
+  const reunCap = buscarCampoLocal(['cantidad de reuniones'], 'number');
+  const hCap = buscarCampoLocal(['horas de capacitación', 'cantidad de horas'], 'number');
 
   if (fConcluido && (!mesAct || mesAct === '')) mesAct = formatearMesAnio(fConcluido);
 
@@ -679,44 +802,73 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
   }
 
   const motivo = getCampo(cf, 'Motivos de baja', 'dropdown') || (esCancelado ? 'No especificado' : 'N/A');
+  const tipoBajaRaw = getCampo(cf, 'Tipo de baja', 'dropdown');
+  const tipoBaja = tipoBajaRaw || (esCancelado ? 'Producto' : '');
 
-  const canField = findCustomField(cf, ['canales contratados']);
-  let canalesArray = [];
-  if (canField?.value && Array.isArray(canField.value)) {
-    const opciones = canField.type_config?.options || [];
-    canField.value.forEach(item => {
-      let label = '';
-      if (typeof item === 'string') {
-        const opcion = opciones.find(opt => opt.id === item);
-        label = opcion ? (opcion.label || opcion.name || '') : item;
-      } else if (typeof item === 'object' && item !== null) {
-        label = item.label || item.name || item.value || '';
-      } else if (typeof item === 'number') {
-        const opcion = opciones.find(opt => opt.orderindex === item || opt.id === item);
-        if (opcion) label = opcion.name || opcion.label || '';
+  const cantUsuariosExtra = getCampo(cf, 'Cantidad de Usuarios extras', 'number') || 0;
+
+  // --- CANALES ---
+  const extractCanales = (fieldNames) => {
+    const f3 = findCustomField(cf, fieldNames);
+    let array = [];
+    if (f3?.value) {
+      if (Array.isArray(f3.value)) {
+        const opciones = f3.type_config?.options || [];
+        f3.value.forEach(item => {
+          let label = '';
+          if (typeof item === 'string') {
+            const opcion = opciones.find(opt => opt.id === item || opt.name === item);
+            label = opcion ? (opcion.label || opcion.name || '') : item;
+          } else if (typeof item === 'object' && item !== null) {
+            label = item.label || item.name || item.value || '';
+            if (!label && item.id && opciones.length) {
+              const o = opciones.find(opt => opt.id === item.id);
+              if (o) label = o.label || o.name || '';
+            }
+          } else if (typeof item === 'number') {
+            const opcion = opciones.find(opt => opt.orderindex === item);
+            if (opcion) label = opcion.name || opcion.label || '';
+          }
+          if (label && label.trim() !== '') array.push(label.toLowerCase().trim());
+        });
+      } else if (typeof f3.value === 'string') {
+        array = f3.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
       }
-      if (label && label.trim() !== '') canalesArray.push(label.toLowerCase().trim());
-    });
-  }
+    }
+    return array;
+  };
 
-  const wa = esConcluido ? 'SÍ' : (canalesArray.some(c => c.includes('whatsapp')) ? 'SÍ' : 'NO');
-  const ig = canalesArray.some(c => c.includes('instagram')) ? 'SÍ' : 'NO';
-  const wc = canalesArray.some(c => c.includes('webchat')) ? 'SÍ' : 'NO';
-  const pbx = canalesArray.some(c => c.includes('pbx') || c.includes('telefonia') || c.includes('telefonía')) ? 'SÍ' : 'NO';
-  const tg = canalesArray.some(c => c.includes('telegram')) ? 'SÍ' : 'NO';
-  const msg = canalesArray.some(c => c.includes('messenger')) ? 'SÍ' : 'NO';
-  const telCanal = pbx;
+  const cCandidates = ['canales contratados', 'canais contratados', 'canales', 'canais', 'productos contratados', 'produtos contratados'];
+  const bCandidates = ['canales bajados', 'canais baixados', 'canales desactivados'];
+  
+  const canalesArray = extractCanales(cCandidates);
+  const canalesBajadosArray = extractCanales(bCandidates);
+
+  const checkChannel = (arr, keys) => arr.some(c => keys.some(k => c.includes(k)));
+
+  const wa = checkChannel(canalesArray, ['whatsapp', 'wpp', 'waba']) ? 'SÍ' : 'NO';
+  const ig = checkChannel(canalesArray, ['instagram', 'ig ']) ? 'SÍ' : 'NO';
+  const wc = checkChannel(canalesArray, ['webchat', 'wc ']) ? 'SÍ' : 'NO';
+  const pbx = checkChannel(canalesArray, ['pbx', 'telefonia', 'telefonía', 'telephony']) ? 'SÍ' : 'NO';
+  const tg = checkChannel(canalesArray, ['telegram', 'tg ']) ? 'SÍ' : 'NO';
+  const msg = checkChannel(canalesArray, ['messenger', 'facebook', 'fb ']) ? 'SÍ' : 'NO';
+
+  const waBajado = canalesBajadosArray.some(c => c.includes('whatsapp')) ? 'SÍ' : 'NO';
+  const igBajado = canalesBajadosArray.some(c => c.includes('instagram')) ? 'SÍ' : 'NO';
+  const pbxBajado = canalesBajadosArray.some(c => c.includes('pbx') || c.includes('telefonia') || c.includes('telefonía')) ? 'SÍ' : 'NO';
+
+  const prodContratado = getCampo(cf, 'Productos contratados', 'dropdown') || 'Hola! Suite';
 
   const tagsArray = t.tags ? t.tags.map(tag => String(tag?.name || '').toLowerCase()) : [];
   const tagsStr = tagsArray.join(',');
 
+  // Detectar tipo de implementación de forma robusta
+  const tipo = detectarTipoImpl(cf, tagsStr);
+
   let upgImpl = 'NO';
   let upgPost = 'NO';
   let upgradeOrigID = '';
-
-  if (tagsStr.includes('upgrade') || (cf.find(f => String(f?.name || '').toLowerCase().includes('tipo de implem'))?.value?.toString() === '1')) {
-    if (!esConcluido) upgImpl = 'SÍ';
-  }
+  if (tipo === 'Upgrade' && !esConcluido) upgImpl = 'SÍ';
 
   const sinReq = tagsStr.includes('sin requisitos') ? 'SÍ' : 'NO';
   const pausada = tagsStr.includes('pausada') || tagsStr.includes('pausa') ? 'SÍ' : 'NO';
@@ -734,15 +886,26 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
   }
 
   const plan = getPlan(cf);
-  const email = getCampo(cf, 'E-mail', 'email');
-  const telefono = getCampo(cf, 'Número para contacto', 'text');
-
-  const tipoF = cf.find(f => String(f?.name || '').toLowerCase().includes('tipo de implem'));
-  const tipo = tipoF?.value?.toString() === '1' ? 'Upgrade' : 'Implementación';
+  const email = getCampo(cf, 'E-mail', 'email') || getCampo(cf, 'email', 'text');
+  const telefono = getCampo(cf, 'Número para contacto', 'text') || getCampo(cf, 'telefono', 'text');
 
   const consCom = rKickoff && rKickoff === rVer && rVer === rCap && rCap === rGoLive && rGoLive === rAct && rKickoff !== '' ? 'SÍ' : 'NO';
   const mesInicio = formatearMesAnio(fInicio);
   const mesFin = fConcluido ? formatearMesAnio(fConcluido) : 'N/A';
+
+  // Etapa actual legible
+  let etapaActual = 'Desconocida';
+  if (esConcluido) etapaActual = 'Activo';
+  else if (esCancelado) etapaActual = 'Cancelado';
+  else if (eKickoffListo) etapaActual = 'Listo para Kickoff';
+  else if (eKickoff) etapaActual = 'En Kickoff';
+  else if (eAnalisis) etapaActual = 'Análisis de Meta';
+  else if (eInstListo) etapaActual = 'Listo para Instalación';
+  else if (eInst) etapaActual = 'En Instalación';
+  else if (eCap) etapaActual = 'En Capacitación';
+  else if (eGoLive) etapaActual = 'Go-Live';
+  else if (eActCanales) etapaActual = 'Activación Canales';
+  else etapaActual = String(estado || '').substring(0, 30) || 'Desconocida';
 
   return {
     id,
@@ -750,6 +913,7 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
     url: link,
     estado,
     etapaAnterior,
+    etapaActual,
     log: logs.join('→'),
     fInicio: fInicio.getTime(),
     fInicioFmt: fmtFecha(fInicio, tz),
@@ -774,6 +938,10 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
     dKickoffTotal, dVerTotal, dInstTotal, dCapTotal, dActTotal,
     mesICap, mesFCap, mesAct, cantCap, hCap, reunCap,
     hKickoff, hVer, hGoLive, hAct,
+    rVenta: rCom || '',
+    rCom: rCom || '',
+    mensualidad: getCampo(cf, 'Mensualidad', 'number') || getCampo(cf, 'monto', 'number') || 0,
+    aderencia: getCampo(cf, 'Cuota de adherencia', 'number') || getCampo(cf, 'adherencia', 'number') || undefined,
     status,
     alerta,
     dSinMov,
@@ -781,7 +949,12 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
     dUsoTotal: dUsoTot,
     mUsoTotal: mUsoTot,
     motivo,
-    canales: { wa, ig, wc, pbx, tg, msg, tel: telCanal },
+    tipoBaja,
+    cantUsuariosExtra,
+    prodContratado,
+    canales: { wa, ig, wc, pbx, tg, msg, tel: pbx },
+    canalesBajados: { wa: waBajado, ig: igBajado, pbx: pbxBajado, raw: canalesBajadosArray },
+    canalesArray,
     upgImpl, upgPost, upgradeOrigID,
     sinReq, pausada, espCli, espWis, moro,
     pais,
@@ -793,7 +966,12 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
     fuente,
     dPausa: diasPausa,
     mesInicio,
-    mesFin
+    mesFin,
+    // Fechas formateadas para UI
+    fInicioFmt: fmtFecha(fInicio, tz),
+    fActivacionFmt: fActiv ? fmtFecha(fActiv, tz) : '',
+    fCancelacionFmt: fCanc ? fmtFecha(fCanc, tz) : '',
+    fConcluidoFmt: fConcluido ? fmtFecha(fConcluido, tz) : ''
   };
 }
 
@@ -802,40 +980,63 @@ async function mapTasksToClients(tasks, config = {}, ctx = {}) {
   const tz = ctx?.tz || 'UTC';
 
   const raw = Array.isArray(tasks) ? tasks : [];
-  
+
   // Filtrado flexible
   const filtered = raw.filter(t => {
     if (debeIgnorarTarea(t, cfg)) return false;
     if (debeIgnorarPorEstado(t, cfg)) return false;
-    
+
     // Si la lista de estados implementables está vacía, incluimos todo lo que no sea ignorado
     if (!cfg.ESTADOS_IMPL || cfg.ESTADOS_IMPL.length === 0) return true;
-    
+
     const estadoLower = String(t?.status?.status || '').toLowerCase();
     return (cfg.ESTADOS_IMPL || []).some(e => {
-       const impl = String(e || '').toLowerCase();
-       return estadoLower === impl || estadoLower.includes(impl);
+      const impl = String(e || '').toLowerCase();
+      return estadoLower === impl || estadoLower.includes(impl);
     });
   });
 
   const clients = [];
-  for (const t of filtered) {
-    // Nota: esta función puede ser lenta si ctx.fetchTaskDetails hace una llamada por tarea.
-    const client = await procesarTareaActualizadaNode(t, filtered, cfg, { ...ctx, tz });
-    clients.push(client);
+  const batchSize = 25; // Procesar 25 tareas en paralelo a la vez
+  const prevClients = ctx.prevClients || [];
+  
+  // Mapear clientes previos por ID para acceso rápido
+  const prevMap = new Map();
+  prevClients.forEach(c => prevMap.set(c.id, c));
+
+  for (let i = 0; i < filtered.length; i += batchSize) {
+    const batch = filtered.slice(i, i + batchSize);
+    const results = await Promise.all(batch.map(async (t) => {
+      try {
+        // Optimización: Si el cliente ya existe y la fecha de actualización no ha cambiado, 
+        // podemos intentar reutilizar la fInicio encontrada anteriormente para evitar fetch de historia.
+        const cached = prevMap.get(t.id);
+        const taskCtx = { ...ctx, tz };
+        
+        if (cached && cached.fInicio && String(t.date_updated) === String(cached.fActualizado)) {
+           taskCtx.cachedFInicio = cached.fInicio;
+        }
+
+        return await procesarTareaActualizadaNode(t, filtered, cfg, taskCtx);
+      } catch (err) {
+        console.error(`[clickupMapper] Error procesando tarea ${t.id} (${t.name}):`, err.message);
+        return null;
+      }
+    }));
+    clients.push(...results.filter(Boolean));
   }
 
-  // Misma orden que server.js: más recientes primero por inicio
+  // Más recientes primero por inicio
   clients.sort((a, b) => (b.fInicio || 0) - (a.fInicio || 0));
   return clients;
 }
 
 function buscarDomIPExacto(nombre, domDatos) {
   if (!nombre || !domDatos || !Array.isArray(domDatos)) return null;
-  const n = String(nombre || '').toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+  const n = normNom(nombre);
   return domDatos.find(d => {
     const rawVal = d.cliente || d.nombre || d.CLIENTE || d.Cliente || '';
-    const normVal = String(rawVal).toUpperCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+    const normVal = normNom(rawVal);
     return normVal === n;
   }) || null;
 }
@@ -844,14 +1045,15 @@ module.exports = {
   mapTasksToClients,
   computeTasksFingerprint,
   normNom,
+  normCons,
   buscarDomIPExacto,
   getPais,
   getPlan,
-  normCons,
   diasHab,
   obtenerHistorialEstadosActualizadoFromDetails,
-  buscarFechaConcluidoFromDetails
+  buscarFechaConcluidoFromDetails,
+  extractAllCustomFieldsRaw,
+  findCustomField,
+  getCampo,
+  detectarTipoImpl,
 };
-
-
-

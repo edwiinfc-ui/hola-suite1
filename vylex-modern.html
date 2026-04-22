@@ -5957,7 +5957,7 @@ function openBoardCardModal(kbId, cardId){
   const memberOptions = members.length
     ? members.map(m=>`<option value="${escHtml(String(m.id))}" ${String(m.id)===resp?'selected':''}>${escHtml(m.name||m.id)}</option>`).join('')
     : '';
-  setHtml('kanbanCardModalContent', `
+  setHtml('kanbanModalContent', `
     <div class="modal-section-title"><i class="fa fa-pen"></i> Tarjeta</div>
     <div class="config-field"><label>Título</label><input type="text" id="boardCardTitle" value="${escHtml(card.title||'')}" /></div>
     <div class="config-field"><label>Descripción</label><textarea id="boardCardDesc" rows="3" style="resize:vertical">${escHtml(desc)}</textarea></div>
@@ -6117,7 +6117,7 @@ function openCreateLocalCardModal() {
   const activeKb = APP.kanbans.find(k => k.id === APP.activeKanbanId);
   if (!activeKb || activeKb.linkedToClickup) return;
 
-  setHtml('kanbanCardModalContent', `
+  setHtml('kanbanModalContent', `
     <div class="modal-section-title"><i class="fa fa-plus"></i> Nueva Tarjeta Local</div>
     <div class="config-field"><label>Título</label><input type="text" id="lcTitle" placeholder="Ej: Revisar documentación"></div>
     <div class="config-field"><label>Responsable</label><input type="text" id="lcResp" placeholder="Nombre del consultor"></div>
@@ -6160,7 +6160,7 @@ function openLocalCardEdit(boardId, cardId) {
   const card = activeKb?.cards?.find(c => c.id === cardId);
   if (!card) return;
 
-  setHtml('kanbanCardModalContent', `
+  setHtml('kanbanModalContent', `
     <div class="modal-section-title"><i class="fa fa-pen"></i> Editar Tarjeta Local</div>
     <div class="config-field"><label>Título</label><input type="text" id="lcTitle" value="${escHtml(card.title)}"></div>
     <div class="config-field"><label>Responsable</label><input type="text" id="lcResp" value="${escHtml(card.responsable || '')}"></div>
@@ -6247,7 +6247,7 @@ function editBoardConfig(boardId) {
   const roles = ["admin", "consultant", "cs", "viewer"];
   const viewPerms = kb.permissions?.view || [];
 
-  setHtml('kanbanCardModalContent', `
+  setHtml('kanbanModalContent', `
     <div class="modal-section-title"><i class="fa fa-gear"></i> Configuración del Tablero</div>
     <div class="config-field"><label>Nombre</label><input type="text" id="editKbName" value="${escHtml(kb.name)}"></div>
     <div class="modal-divider"></div>

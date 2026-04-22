@@ -1,0 +1,16 @@
+{
+  "clickupListId": "",
+  "holaUrl": "https://wispro.holasuite.com/api/v1",
+  "holaToken": "",
+  "holaWs": "",
+  "clickupCustomFieldMap": {
+    "rKickoff": ""
+  },
+  "consultantMetas": {
+    "Alejandro Zambrano": 10,
+    "Mariane Teló": 10,
+    "Edwin Franco": 10,
+    "Blitzangel Leon": 10,
+    "Bruno Gabriel Rodrigues": 10
+  }
+}

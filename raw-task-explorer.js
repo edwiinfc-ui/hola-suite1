@@ -11,21 +11,31 @@
 const fetch = require('node-fetch');
 const fs = require('fs');
 
+function loadConfig() {
+    const configPaths = [
+        'data/global_config.local.json',
+        'data/global_config.json',
+        'global_config.json'
+    ];
+    for (const p of configPaths) {
+        try {
+            if (!fs.existsSync(p)) continue;
+            return JSON.parse(fs.readFileSync(p, 'utf8'));
+        } catch (_e) {}
+    }
+    return {};
+}
+
 async function explorer() {
     const args = process.argv.slice(2);
     const statusFilter = args.find(a => a.startsWith('--status='))?.split('=')[1]?.toLowerCase();
     
-    if (!fs.existsSync('global_config.json')) {
-        console.error('Error: global_config.json no encontrado');
-        return;
-    }
-
-    const globalConfig = JSON.parse(fs.readFileSync('global_config.json', 'utf8'));
+    const globalConfig = loadConfig();
     const apiKey = globalConfig.clickupApiKey;
     const listId = globalConfig.clickupListId;
 
     if (!apiKey || !listId) {
-        console.error('Error: API Key o List ID no configurados en global_config.json');
+        console.error('Error: API Key o List ID no configurados (usa `.env` o `data/global_config.local.json`)');
         return;
     }
 

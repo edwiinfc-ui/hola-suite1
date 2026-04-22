@@ -272,7 +272,9 @@ function testLocalDatabase() {
   const filesToCheck = [
     { name: 'users.json', path: path.join(__dirname, 'users.json') },
     { name: 'audit_logs.json', path: path.join(__dirname, 'audit_logs.json') },
-    { name: 'global_config.json', path: path.join(__dirname, 'global_config.json') },
+    { name: 'data/global_config.local.json', path: path.join(__dirname, 'data', 'global_config.local.json') },
+    { name: 'data/global_config.json', path: path.join(__dirname, 'data', 'global_config.json') },
+    { name: 'global_config.json (legacy)', path: path.join(__dirname, 'global_config.json') },
     { name: 'data/clientes.json', path: path.join(__dirname, 'data', 'clientes.json') },
   ];
 

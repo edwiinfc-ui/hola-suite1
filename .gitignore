@@ -62,4 +62,15 @@ dist
 audit_logs.json
 kanbans.json
 sales_config.json
-data/*.json
+
+# Local secrets / overrides (never commit)
+data/global_config.local.json
+global_config.local.json
+
+# Runtime state (optional)
+data/audit_logs.json
+data/form_submissions.json
+data/sync_complete.json
+data/comentarios.json
+data/forms_definitions.json
+data/local_overrides.json

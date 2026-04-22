@@ -19,7 +19,21 @@ const path = require('path');
 const fetch = require('node-fetch');
 require('dotenv').config();
 
-const CONFIG_FILE = path.join(__dirname, 'global_config.json');
+const CONFIG_FILES = [
+  path.join(__dirname, 'data', 'global_config.local.json'),
+  path.join(__dirname, 'data', 'global_config.json'),
+  path.join(__dirname, 'global_config.json') // legacy/backward-compat
+];
+
+function loadFirstConfig() {
+  for (const file of CONFIG_FILES) {
+    try {
+      if (!fs.existsSync(file)) continue;
+      return { file, data: JSON.parse(fs.readFileSync(file, 'utf8')) };
+    } catch (_e) {}
+  }
+  return { file: CONFIG_FILES[0], data: {} };
+}
 
 // Colores ANSI para la consola
 const C = {
@@ -55,25 +69,27 @@ async function debug() {
   // ──────────────────────────────────────────────────────────────
   header(1, 'Verificando global_config.json');
   let globalConfig = {};
+  let usedFile = null;
   try {
-    if (!fs.existsSync(CONFIG_FILE)) {
-      err(`Archivo no encontrado: ${CONFIG_FILE}`);
+    const loaded = loadFirstConfig();
+    usedFile = loaded.file;
+    globalConfig = loaded.data || {};
+    if (!Object.keys(globalConfig).length) {
+      err(`Archivo no encontrado o vacío: ${usedFile}`);
       failed++;
     } else {
-      const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
-      globalConfig = JSON.parse(raw);
-      ok('global_config.json es un JSON válido');
+      ok(`Config JSON válido: ${usedFile}`);
       passed++;
       
       const keys = Object.keys(globalConfig);
       info(`Claves encontradas: ${keys.join(', ')}`);
     }
   } catch (e) {
-    err(`Error parseando global_config.json: ${e.message}`);
+    err(`Error parseando config: ${e.message}`);
     failed++;
     if (e.message.includes('position')) {
       const pos = parseInt((e.message.match(/position (\d+)/) || [])[1] || '0');
-      const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
+      const raw = usedFile && fs.existsSync(usedFile) ? fs.readFileSync(usedFile, 'utf8') : '';
       warn(`Contenido cerca del error: "${raw.substring(Math.max(0, pos - 20), pos + 20)}"`);
     }
     return;

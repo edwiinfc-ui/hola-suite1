@@ -9,7 +9,38 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 
-const CONFIG_FILE = path.join(__dirname, 'global_config.json');
+const CONFIG_PATHS = [
+  path.join(__dirname, 'data', 'global_config.local.json'),
+  path.join(__dirname, 'data', 'global_config.json'),
+  path.join(__dirname, 'global_config.json')
+];
+
+function loadConfig() {
+  for (const p of CONFIG_PATHS) {
+    try {
+      if (!fs.existsSync(p)) continue;
+      return { path: p, data: JSON.parse(fs.readFileSync(p, 'utf8')) };
+    } catch (_e) {}
+  }
+  return { path: CONFIG_PATHS[0], data: {} };
+}
+
+function ensureLocalConfigExists() {
+  const localPath = CONFIG_PATHS[0];
+  if (fs.existsSync(localPath)) return localPath;
+  const defaultData = {
+    clickupApiKey: '',
+    clickupListId: '',
+    holaUrl: 'https://wispro.holasuite.com/api/v1',
+    holaToken: '',
+    googleSheetsApiKey: '',
+    complementosSheetId: '',
+    complementosSheetName: ''
+  };
+  fs.mkdirSync(path.dirname(localPath), { recursive: true });
+  fs.writeFileSync(localPath, JSON.stringify(defaultData, null, 2));
+  return localPath;
+}
 
 console.log('\n🔍 DIAGNÓSTICO VY-LEX\n');
 console.log('═'.repeat(50));
@@ -18,7 +49,8 @@ console.log('═'.repeat(50));
 console.log('\n1️⃣ VERIFICANDO ARCHIVOS:');
 const archivos = [
   'server.js',
-  'global_config.json',
+  'data/global_config.json',
+  'data/global_config.local.json',
   'ENDPOINTS_INTEGRACION.js',
   'dashboard.html'
 ];
@@ -32,44 +64,40 @@ archivos.forEach(f => {
 console.log('\n2️⃣ VERIFICANDO CONFIGURACIÓN:');
 
 let config = {};
-if (fs.existsSync(CONFIG_FILE)) {
-  try {
-    config = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
-    console.log('   ✅ global_config.json encontrado');
-    console.log(`   ${config.clickupApiKey ? '✅' : '❌'} ClickUp API Key: ${config.clickupApiKey ? '***' + config.clickupApiKey.slice(-4) : 'NO CONFIGURADA'}`);
-    console.log(`   ${config.clickupListId ? '✅' : '❌'} ClickUp List ID: ${config.clickupListId || 'NO CONFIGURADO'}`);
-  } catch (e) {
-    console.log(`   ❌ Error leyendo config: ${e.message}`);
+try {
+  const loaded = loadConfig();
+  config = loaded.data || {};
+  if (!Object.keys(config).length) {
+    const created = ensureLocalConfigExists();
+    console.log(`   ⚠️  No se encontró config válida. Se creó: ${created}`);
+    config = JSON.parse(fs.readFileSync(created, 'utf8'));
+  } else {
+    console.log(`   ✅ Config encontrada: ${loaded.path}`);
   }
-} else {
-  console.log('   ❌ global_config.json NO EXISTE');
-  console.log('      Creando uno vacío...');
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify({
-    clickupApiKey: '',
-    clickupListId: '',
-    googleSheetsApiKey: '',
-    complementosSheetId: '',
-    complementosSheetName: ''
-  }, null, 2));
-  console.log('      ✅ Creado (agrega tus credenciales)');
+  const apiKey = (config.clickupApiKey || process.env.CLICKUP_API_KEY || '').trim();
+  const listId = (config.clickupListId || process.env.CLICKUP_LIST_ID || '').trim();
+  console.log(`   ${apiKey ? '✅' : '❌'} ClickUp API Key: ${apiKey ? '***' + apiKey.slice(-4) : 'NO CONFIGURADA'}`);
+  console.log(`   ${listId ? '✅' : '❌'} ClickUp List ID: ${listId || 'NO CONFIGURADO'}`);
+} catch (e) {
+  console.log(`   ❌ Error leyendo config: ${e.message}`);
 }
 
 // 3. Probar conexión ClickUp
 console.log('\n3️⃣ PROBANDO CONEXIÓN CLICKUP:');
 
 (async () => {
-  const apiKey = config.clickupApiKey || process.env.CLICKUP_API_KEY;
-  const listId = config.clickupListId || process.env.CLICKUP_LIST_ID;
+  const apiKey = (config.clickupApiKey || process.env.CLICKUP_API_KEY || '').trim();
+  const listId = (config.clickupListId || process.env.CLICKUP_LIST_ID || '').trim();
   
   if (!apiKey) {
     console.log('   ❌ NO HAY API KEY');
-    console.log('      Solución: Edita global_config.json y agrega tu ClickUp API Key');
+    console.log('      Solución: configura CLICKUP_API_KEY en `.env` o en `data/global_config.local.json`');
     process.exit(1);
   }
   
   if (!listId) {
     console.log('   ❌ NO HAY LIST ID');
-    console.log('      Solución: Edita global_config.json y agrega tu ClickUp List ID');
+    console.log('      Solución: configura CLICKUP_LIST_ID en `.env` o en `data/global_config.local.json`');
     process.exit(1);
   }
   

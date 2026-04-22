@@ -31,7 +31,9 @@ const LOCAL_OVERRIDES_FILE = path.join(DATA_DIR, 'local_overrides.json');
 const SALES_CONFIG_FILE = path.join(DATA_DIR, 'sales_config.json');
 const LOGS_FILE = path.join(DATA_DIR, 'audit_logs.json');
 const KANBANS_FILE = path.join(DATA_DIR, 'kanbans.json');
-const CONFIG_FILE = path.join(DATA_DIR, 'global_config.json');
+const CONFIG_FILE = path.join(DATA_DIR, 'global_config.json'); // defaults (trackeable)
+const CONFIG_LOCAL_FILE = path.join(DATA_DIR, 'global_config.local.json'); // secrets/overrides (gitignored)
+const HOST = (process.env.HOST || '127.0.0.1').trim();
 
 const PUBLIC_FILES = new Set([
   'vylex.html',
@@ -253,12 +255,24 @@ let sseClients = []; // Para sincronización en tiempo real
 
 function readGlobalConfig() {
   try {
-    if (!fs.existsSync(CONFIG_FILE)) return {};
-    return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'));
+    const base = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) : {};
+    const local = fs.existsSync(CONFIG_LOCAL_FILE) ? JSON.parse(fs.readFileSync(CONFIG_LOCAL_FILE, 'utf8')) : {};
+    const merged = { ...(base || {}), ...(local || {}) };
+
+    // Env overrides (highest priority)
+    if ((process.env.CLICKUP_API_KEY || '').trim()) merged.clickupApiKey = (process.env.CLICKUP_API_KEY || '').trim();
+    if ((process.env.CLICKUP_LIST_ID || '').trim()) merged.clickupListId = (process.env.CLICKUP_LIST_ID || '').trim();
+    if ((process.env.HOLA_API_URL || '').trim()) merged.holaUrl = (process.env.HOLA_API_URL || '').trim();
+    if ((process.env.HOLA_API_TOKEN || '').trim()) merged.holaToken = (process.env.HOLA_API_TOKEN || '').trim();
+    if ((process.env.GOOGLE_SHEETS_API_KEY || '').trim()) merged.googleSheetsApiKey = (process.env.GOOGLE_SHEETS_API_KEY || '').trim();
+
+    return merged;
   } catch (e) { return {}; }
 }
 function writeGlobalConfig(config) {
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+  // Para evitar commitear secretos por accidente, persistimos en un archivo local (gitignored).
+  // Mantiene compatibilidad: si CONFIG_LOCAL_FILE no existe, se crea automáticamente.
+  fs.writeFileSync(CONFIG_LOCAL_FILE, JSON.stringify(config, null, 2));
   // Notificar a todos los clientes conectados
   broadcastEvent('configUpdated', config);
 }
@@ -1970,7 +1984,7 @@ app.post('/api/consultores/sync', auth, async (req, res) => {
     
     // Obtener miembros desde ClickUp
     const teamRes = await fetch(`https://api.clickup.com/api/v2/team`, {
-      headers: { Authorization: CONFIG.CLICKUP_API_KEY }
+      headers: { Authorization: getClickUpApiKey() }
     });
     const teamData = await teamRes.json();
     
@@ -1985,19 +1999,11 @@ app.post('/api/consultores/sync', auth, async (req, res) => {
       });
     }
     
-    // Guardar en global_config.json
+    // Guardar en configuración (preferimos archivo local gitignored)
     if (Object.keys(consultores).length > 0) {
-      let globalConfig = {};
-      const cfgFile = path.join(__dirname, 'global_config.json');
-      if (fs.existsSync(cfgFile)) {
-        try {
-          globalConfig = JSON.parse(fs.readFileSync(cfgFile, 'utf8'));
-        } catch (parseErr) {
-          globalConfig = {};
-        }
-      }
+      const globalConfig = readGlobalConfig();
       globalConfig.CONSULTORES = consultores;
-      fs.writeFileSync(cfgFile, JSON.stringify(globalConfig, null, 2));
+      writeGlobalConfig(globalConfig);
     }
     
     res.json({ ok: true, consultores: Object.keys(consultores).length });
@@ -5099,8 +5105,8 @@ app.get('*', (_req, res) => {
 // INICIO
 // ================================================================
 ensureDataDir();
-app.listen(PORT, () => {
-  console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  console.log(`✅ Servidor corriendo en http://${HOST}:${PORT}`);
   console.log(`🔑 JWT_SECRET: ${CONFIG.JWT_SECRET ? 'Cargado CORRECTAMENTE' : 'ERROR: NO CARGADO'}`);
   
   // Obtener List ID activo (prefiere global_config sobre env)
@@ -5114,6 +5120,13 @@ app.listen(PORT, () => {
 
   // 🚀 Iniciar sincronización programada (cada 30 min) sin bloquear el login de los usuarios
   iniciarBackgroundSync();
+});
+server.on('error', (err) => {
+  console.error('❌ Error iniciando servidor:', err?.message || err);
+  if (err?.code === 'EACCES' || err?.code === 'EPERM') {
+    console.error(`ℹ️  Tip: prueba con HOST=127.0.0.1 PORT=${PORT} (o cambia el puerto).`);
+  }
+  process.exitCode = 1;
 });
 
 async function iniciarBackgroundSync() {

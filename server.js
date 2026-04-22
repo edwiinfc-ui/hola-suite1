@@ -33,6 +33,8 @@ const LOGS_FILE = path.join(DATA_DIR, 'audit_logs.json');
 const KANBANS_FILE = path.join(DATA_DIR, 'kanbans.json');
 const CONFIG_FILE = path.join(DATA_DIR, 'global_config.json'); // defaults (trackeable)
 const CONFIG_LOCAL_FILE = path.join(DATA_DIR, 'global_config.local.json'); // secrets/overrides (gitignored)
+const INTEGRATIONS_FILE = path.join(DATA_DIR, 'integrations.json'); // public metadata (trackeable)
+const INTEGRATIONS_LOCAL_FILE = path.join(DATA_DIR, 'integrations.local.json'); // secrets (gitignored)
 const HOST = (process.env.HOST || '127.0.0.1').trim();
 
 const PUBLIC_FILES = new Set([
@@ -319,6 +321,157 @@ function readLocalOverrides() {
 function writeLocalOverrides(data) {
   fs.writeFileSync(LOCAL_OVERRIDES_FILE, JSON.stringify(data, null, 2));
 }
+
+// ================================================================
+// INTEGRATIONS (multi-provider registry)
+// ================================================================
+function readIntegrationsFile(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) return [];
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_e) {
+    return [];
+  }
+}
+
+function writeIntegrationsFile(filePath, list) {
+  fs.writeFileSync(filePath, JSON.stringify(Array.isArray(list) ? list : [], null, 2));
+}
+
+function mergeIntegrations(baseList, localList) {
+  const byId = new Map();
+  (Array.isArray(baseList) ? baseList : []).forEach(it => { if (it?.id) byId.set(String(it.id), { ...it }); });
+  (Array.isArray(localList) ? localList : []).forEach(it => {
+    if (!it?.id) return;
+    const id = String(it.id);
+    byId.set(id, { ...(byId.get(id) || { id }), ...it });
+  });
+  return Array.from(byId.values());
+}
+
+function maskIntegrationSecrets(integration) {
+  const out = { ...(integration || {}) };
+  if (out.auth && typeof out.auth === 'object') {
+    const auth = { ...out.auth };
+    if (auth.token) auth.token = '***' + String(auth.token).slice(-4);
+    if (auth.apiKey) auth.apiKey = '***' + String(auth.apiKey).slice(-4);
+    if (auth.password) auth.password = '***';
+    out.auth = auth;
+  }
+  return out;
+}
+
+function readIntegrationsMerged() {
+  const base = readIntegrationsFile(INTEGRATIONS_FILE);
+  const local = readIntegrationsFile(INTEGRATIONS_LOCAL_FILE);
+  return mergeIntegrations(base, local);
+}
+
+function upsertIntegration(id, integration, { storeSecrets = true } = {}) {
+  const base = readIntegrationsFile(INTEGRATIONS_FILE);
+  const local = readIntegrationsFile(INTEGRATIONS_LOCAL_FILE);
+
+  const clean = { ...(integration || {}), id: String(id) };
+  const { auth, ...rest } = clean;
+
+  const idxBase = base.findIndex(x => String(x?.id) === String(id));
+  const baseRecord = { ...(idxBase >= 0 ? base[idxBase] : {}), ...rest, id: String(id) };
+  if (idxBase >= 0) base[idxBase] = baseRecord; else base.push(baseRecord);
+  writeIntegrationsFile(INTEGRATIONS_FILE, base);
+
+  if (storeSecrets && auth && typeof auth === 'object') {
+    const idxLocal = local.findIndex(x => String(x?.id) === String(id));
+    const localRecord = { ...(idxLocal >= 0 ? local[idxLocal] : {}), id: String(id), auth: { ...(auth || {}) } };
+    if (idxLocal >= 0) local[idxLocal] = localRecord; else local.push(localRecord);
+    writeIntegrationsFile(INTEGRATIONS_LOCAL_FILE, local);
+  }
+
+  return readIntegrationsMerged().find(x => String(x.id) === String(id));
+}
+
+function deleteIntegration(id) {
+  const base = readIntegrationsFile(INTEGRATIONS_FILE).filter(x => String(x?.id) !== String(id));
+  const local = readIntegrationsFile(INTEGRATIONS_LOCAL_FILE).filter(x => String(x?.id) !== String(id));
+  writeIntegrationsFile(INTEGRATIONS_FILE, base);
+  writeIntegrationsFile(INTEGRATIONS_LOCAL_FILE, local);
+}
+
+function buildIntegrationAuthHeaders(integration) {
+  const auth = integration?.auth || {};
+  const headers = {};
+  if (auth.type === 'bearer' && auth.token) headers.Authorization = `Bearer ${auth.token}`;
+  if (auth.type === 'api_key' && auth.apiKey) headers.Authorization = String(auth.apiKey);
+  if (auth.type === 'basic' && auth.username && auth.password) {
+    const b64 = Buffer.from(`${auth.username}:${auth.password}`, 'utf8').toString('base64');
+    headers.Authorization = `Basic ${b64}`;
+  }
+  return headers;
+}
+
+app.get('/api/integrations', auth, (req, res) => {
+  const merged = readIntegrationsMerged().map(maskIntegrationSecrets);
+  res.json(merged);
+});
+
+app.post('/api/integrations', auth, (req, res) => {
+  // Permitir solo admin crear integraciones (evita que viewers guarden secretos)
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Solo admin' });
+  const body = req.body || {};
+  const id = String(body.id || `int-${Date.now()}`);
+  const provider = String(body.provider || '').trim();
+  const name = String(body.name || '').trim();
+  const baseUrl = String(body.baseUrl || '').trim();
+  if (!provider || !name || !baseUrl) return res.status(400).json({ error: 'provider, name y baseUrl son requeridos' });
+  const saved = upsertIntegration(id, {
+    id,
+    provider,
+    name,
+    baseUrl,
+    auth: body.auth || null,
+    meta: body.meta || {}
+  });
+  res.json(maskIntegrationSecrets(saved));
+});
+
+app.put('/api/integrations/:id', auth, (req, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Solo admin' });
+  const id = String(req.params.id || '').trim();
+  const body = req.body || {};
+  if (!id) return res.status(400).json({ error: 'id requerido' });
+  const saved = upsertIntegration(id, { ...body, id }, { storeSecrets: true });
+  res.json(maskIntegrationSecrets(saved));
+});
+
+app.delete('/api/integrations/:id', auth, (req, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Solo admin' });
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'id requerido' });
+  deleteIntegration(id);
+  res.json({ ok: true });
+});
+
+app.post('/api/integrations/:id/test', auth, async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  const integration = readIntegrationsMerged().find(x => String(x?.id) === id);
+  if (!integration) return res.status(404).json({ error: 'Integración no encontrada' });
+  const baseUrl = String(integration.baseUrl || '').replace(/\/+$/, '');
+  const provider = String(integration.provider || '').toLowerCase();
+
+  let testUrl = baseUrl;
+  if (provider === 'clickup') testUrl = 'https://api.clickup.com/api/v2/team';
+  if (provider === 'jira') testUrl = `${baseUrl}/rest/api/3/myself`;
+
+  try {
+    const headers = buildIntegrationAuthHeaders(integration);
+    const resp = await fetch(testUrl, { headers, timeout: 15000 });
+    const text = await resp.text().catch(() => '');
+    if (!resp.ok) return res.status(resp.status).json({ ok: false, status: resp.status, body: text.slice(0, 400) });
+    return res.json({ ok: true, status: resp.status });
+  } catch (e) {
+    return res.status(502).json({ ok: false, error: e.message });
+  }
+});
 
 /**
  * Fusionar datos de ClickUp con sobreescrituras locales

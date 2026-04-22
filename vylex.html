@@ -1836,6 +1836,14 @@ tbody td{padding:10px 13px;font-size:12px;vertical-align:middle}
           <div id="customApisList" style="margin-top:10px"></div>
         </div>
         <div class="config-card">
+          <div class="config-title"><i class="fa fa-plug-circle-plus"></i> Integraciones (múltiples Kanbans) <span class="info-tip" data-tip="Crea tantas integraciones como quieras (ClickUp, Jira, CRM). Luego podrás reutilizarlas para generar Kanbans específicos (CS, Solicitudes, etc.) y sincronizar.">i</span></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+            <div style="font-size:11px;color:var(--muted)">Credenciales guardadas en servidor en `data/integrations.local.json` (gitignored).</div>
+            <button class="btn-primary btn-sm" onclick="openIntegrationModal()"><i class="fa fa-plus"></i> Agregar integración</button>
+          </div>
+          <div id="integrationsList" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+        <div class="config-card">
           <div class="config-title"><i class="fa fa-brush"></i> Branding & Front <span class="info-tip" data-tip="Personaliza logo, nombre y colores para reutilizar este dashboard con cualquier operación o marca.">i</span></div>
           <div class="config-field"><label>Nombre del dashboard</label><input type="text" id="cfgBrandName" placeholder="Mi Dashboard Comercial"></div>
           <div class="config-field"><label>Subtítulo</label><input type="text" id="cfgBrandTagline" placeholder="Analytics operativo"></div>
@@ -2655,6 +2663,7 @@ const APP = {
   salesFields:[],
   pendingConflicts:[],
   syncProtectedFields:[],
+  integrations:[],
   users:[],
   groups:[],
   wikiData:{},
@@ -3527,6 +3536,8 @@ function setUserUI(u){
   document.getElementById('userAvatarTop').textContent=avatar;
   document.getElementById('userNameDisplay').textContent=u?.name||u?.username||'Usuario';
   document.getElementById('userRoleDisplay').textContent={admin:'Administrador',consultant:'Consultor',cs:'CS Team',viewer:'Visualizador'}[u.role]||u.role;
+  // Cargar módulos de administración/config que dependen del backend
+  loadIntegrations().catch(()=>{});
 }
 
 // ================================================================
@@ -9852,6 +9863,253 @@ function renderCustomApisList(){
     <span><i class="fa fa-plug" style="color:var(--info)"></i> <strong>${escHtml(api.name)}</strong> <span style="color:var(--muted)">(${escHtml(api.provider)})</span></span>
     <span style="color:var(--muted);font-size:10px">${escHtml(api.url.substring(0,35))}${api.url.length>35?'...':''}</span>
   </div>`).join('');
+}
+
+// ================================================================
+// INTEGRATIONS REGISTRY (multi-provider)
+// ================================================================
+async function loadIntegrations() {
+  const box = document.getElementById('integrationsList');
+  if (!box) return;
+  if (!APP.token) {
+    box.innerHTML = `<div style="font-size:11px;color:var(--muted)">Inicia sesión para gestionar integraciones.</div>`;
+    return;
+  }
+  try {
+    const resp = await fetch('/api/integrations', { headers: getAuthHeader() });
+    if (!resp.ok) throw new Error('No se pudo cargar integraciones');
+    APP.integrations = await resp.json();
+  } catch (e) {
+    console.error('Integrations load error:', e);
+    APP.integrations = [];
+  }
+  renderIntegrationsList();
+}
+
+function providerBadge(provider) {
+  const p = String(provider || '').toLowerCase();
+  const map = {
+    clickup: { icon: 'fa-circle-check', label: 'ClickUp', color: 'rgba(var(--primary-rgb),.18)', border: 'rgba(var(--primary-rgb),.28)' },
+    jira: { icon: 'fa-diagram-project', label: 'Jira', color: 'rgba(var(--info-rgb),.14)', border: 'rgba(var(--info-rgb),.24)' },
+    crm: { icon: 'fa-building', label: 'CRM', color: 'rgba(124,58,237,.14)', border: 'rgba(124,58,237,.24)' },
+    custom: { icon: 'fa-plug', label: 'Custom', color: 'rgba(255,255,255,.06)', border: 'rgba(255,255,255,.12)' }
+  };
+  return map[p] || map.custom;
+}
+
+function renderIntegrationsList() {
+  const box = document.getElementById('integrationsList');
+  if (!box) return;
+  const list = Array.isArray(APP.integrations) ? APP.integrations : [];
+  if (!list.length) {
+    box.innerHTML = `<div style="font-size:11px;color:var(--muted)">Sin integraciones registradas.</div>`;
+    return;
+  }
+  box.innerHTML = list.map(it => {
+    const b = providerBadge(it.provider);
+    const url = String(it.baseUrl || '').replace(/\/+$/, '');
+    return `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:10px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.08);border-radius:10px">
+        <div style="min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 8px;border-radius:999px;background:${b.color};border:1px solid ${b.border};font-size:11px">
+              <i class="fa ${b.icon}" style="opacity:.85"></i> ${escHtml(b.label)}
+            </span>
+            <strong style="font-size:12px;color:var(--text)">${escHtml(it.name || it.id)}</strong>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin-top:6px;word-break:break-all">${escHtml(url || '')}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <button class="btn-outline btn-sm" onclick="testIntegration('${escHtml(String(it.id))}')"><i class="fa fa-vial"></i> Probar</button>
+            <button class="btn-outline btn-sm" onclick="openIntegrationModal('${escHtml(String(it.id))}')"><i class="fa fa-pen"></i> Editar</button>
+            <button class="btn-outline btn-sm" onclick="createKanbanFromIntegration('${escHtml(String(it.id))}','cs')"><i class="fa fa-headset"></i> Kanban CS</button>
+            <button class="btn-outline btn-sm" onclick="createKanbanFromIntegration('${escHtml(String(it.id))}','solicitudes')"><i class="fa fa-inbox"></i> Kanban Solicitudes</button>
+          </div>
+        </div>
+        ${APP.currentUser?.role === 'admin'
+          ? `<button class="btn-micro" title="Eliminar" onclick="deleteIntegrationUI('${escHtml(String(it.id))}')"><i class="fa fa-trash"></i></button>`
+          : ''
+        }
+      </div>
+    `;
+  }).join('');
+}
+
+function openIntegrationModal(id = '') {
+  const existing = id ? (APP.integrations || []).find(x => String(x.id) === String(id)) : null;
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  const isEdit = !!existing;
+
+  const provider = existing?.provider || 'jira';
+  const authType = existing?.auth?.type || 'bearer';
+  const name = existing?.name || '';
+  const baseUrl = existing?.baseUrl || '';
+
+  modal.innerHTML = `
+    <div class="modal" style="width:min(92vw,560px)" onclick="event.stopPropagation()">
+      <div class="modal-header" style="padding:18px 20px">
+        <div class="modal-title"><i class="fa fa-plug-circle-plus"></i> ${isEdit ? 'Editar integración' : 'Agregar integración'}</div>
+        <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><i class="fa fa-xmark"></i></button>
+      </div>
+      <div style="padding:20px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="config-field"><label>Proveedor</label>
+            <select id="intProvider" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px">
+              <option value="clickup" ${provider==='clickup'?'selected':''}>ClickUp</option>
+              <option value="jira" ${provider==='jira'?'selected':''}>Jira</option>
+              <option value="crm" ${provider==='crm'?'selected':''}>CRM</option>
+              <option value="custom" ${provider==='custom'?'selected':''}>Custom</option>
+            </select>
+          </div>
+          <div class="config-field"><label>Nombre</label><input type="text" id="intName" value="${escHtml(name)}" placeholder="Ej: Jira CS"></div>
+        </div>
+        <div class="config-field"><label>URL Base</label><input type="text" id="intBaseUrl" value="${escHtml(baseUrl)}" placeholder="https://tu-jira.atlassian.net"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="config-field"><label>Auth</label>
+            <select id="intAuthType" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:9px 12px;color:var(--text);font-size:13px">
+              <option value="bearer" ${authType==='bearer'?'selected':''}>Bearer token</option>
+              <option value="api_key" ${authType==='api_key'?'selected':''}>API key</option>
+              <option value="basic" ${authType==='basic'?'selected':''}>Basic</option>
+              <option value="none" ${authType==='none'?'selected':''}>Sin auth</option>
+            </select>
+          </div>
+          <div class="config-field"><label>Token / API key</label><input type="password" id="intToken" placeholder="${isEdit ? 'Deja vacío para mantener' : 'Pega aquí'}"></div>
+        </div>
+        <div id="intBasicWrap" style="display:none;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="config-field"><label>Usuario</label><input type="text" id="intUsername" placeholder="email/usuario"></div>
+          <div class="config-field"><label>Password</label><input type="password" id="intPassword" placeholder="••••••••"></div>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+          <button class="btn-outline" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+          <button class="btn-primary" onclick="saveIntegrationUI('${escHtml(String(existing?.id||''))}', this)"><i class="fa fa-save"></i> Guardar</button>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">
+          Tip: Jira Cloud usa `baseUrl` tipo `https://tu-dominio.atlassian.net` y endpoint de prueba `.../rest/api/3/myself`.
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add('active'));
+
+  const authEl = modal.querySelector('#intAuthType');
+  const basicWrap = modal.querySelector('#intBasicWrap');
+  const toggle = () => {
+    const v = authEl.value;
+    basicWrap.style.display = v === 'basic' ? 'grid' : 'none';
+  };
+  authEl.addEventListener('change', toggle);
+  toggle();
+}
+
+async function saveIntegrationUI(existingId, btn) {
+  if (!APP.token) return toast('warning', 'Inicia sesión');
+  const modal = btn.closest('.modal-overlay');
+  const provider = modal.querySelector('#intProvider').value;
+  const name = modal.querySelector('#intName').value.trim();
+  const baseUrl = modal.querySelector('#intBaseUrl').value.trim();
+  const authType = modal.querySelector('#intAuthType').value;
+  const token = modal.querySelector('#intToken').value.trim();
+  const username = modal.querySelector('#intUsername')?.value?.trim() || '';
+  const password = modal.querySelector('#intPassword')?.value || '';
+  if (!name || !baseUrl) return toast('warning', 'Completa nombre y URL base');
+
+  const auth = { type: authType };
+  if (authType === 'bearer' && token) auth.token = token;
+  if (authType === 'api_key' && token) auth.apiKey = token;
+  if (authType === 'basic') {
+    if (username) auth.username = username;
+    if (password) auth.password = password;
+  }
+
+  const payload = { provider, name, baseUrl };
+  if (authType !== 'none') payload.auth = auth;
+
+  try {
+    const isEdit = !!existingId;
+    const url = isEdit ? `/api/integrations/${encodeURIComponent(existingId)}` : '/api/integrations';
+    const method = isEdit ? 'PUT' : 'POST';
+    const resp = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(payload)
+    });
+    const json = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(json?.error || 'Error guardando integración');
+    toast('success', 'Integración guardada');
+    modal.remove();
+    await loadIntegrations();
+  } catch (e) {
+    console.error(e);
+    toast('error', e.message);
+  }
+}
+
+async function deleteIntegrationUI(id) {
+  if (!confirm('¿Eliminar integración?')) return;
+  try {
+    const resp = await fetch(`/api/integrations/${encodeURIComponent(id)}`, { method: 'DELETE', headers: getAuthHeader() });
+    const json = await resp.json().catch(()=>({}));
+    if (!resp.ok) throw new Error(json?.error || 'Error eliminando');
+    toast('success', 'Integración eliminada');
+    loadIntegrations();
+  } catch (e) { toast('error', e.message); }
+}
+
+async function testIntegration(id) {
+  try {
+    toast('info', 'Probando integración...');
+    const resp = await fetch(`/api/integrations/${encodeURIComponent(id)}/test`, { method: 'POST', headers: getAuthHeader() });
+    const json = await resp.json().catch(()=>({}));
+    if (!resp.ok || !json.ok) throw new Error(json?.error || json?.body || 'Test falló');
+    toast('success', 'Conexión OK');
+  } catch (e) {
+    toast('warning', e.message);
+  }
+}
+
+async function createKanbanFromIntegration(integrationId, purpose) {
+  if (!APP.token) return toast('warning', 'Inicia sesión');
+  const integ = (APP.integrations || []).find(x => String(x.id) === String(integrationId));
+  const namePrefix = purpose === 'cs' ? 'CS' : 'Solicitudes';
+  const boardName = `${namePrefix} — ${integ?.name || integrationId}`;
+  const columns = purpose === 'cs'
+    ? [
+        { id: 'new', title: 'Nuevos' },
+        { id: 'in_progress', title: 'En Progreso' },
+        { id: 'waiting', title: 'Esperando Cliente' },
+        { id: 'done', title: 'Resuelto' }
+      ]
+    : [
+        { id: 'inbox', title: 'Inbox' },
+        { id: 'triage', title: 'Triage' },
+        { id: 'doing', title: 'En curso' },
+        { id: 'done', title: 'Cerrado' }
+      ];
+
+  try {
+    const resp = await fetch('/api/kanbans', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({
+        name: boardName,
+        linkedToClickup: false,
+        columns,
+        integrationId,
+        purpose,
+        permissions: { view: ['admin','consultant','cs','viewer'], edit: ['admin','cs'] }
+      })
+    });
+    const json = await resp.json().catch(()=>({}));
+    if (!resp.ok) throw new Error(json?.error || 'No se pudo crear Kanban');
+    toast('success', 'Kanban creado');
+    APP.activeKanbanId = json?.id || APP.activeKanbanId;
+    await loadCustomKanbans();
+    showSection('kanban');
+  } catch (e) {
+    toast('error', e.message);
+  }
 }
 
 function persistPendingConflicts(){

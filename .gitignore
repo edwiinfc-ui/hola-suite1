@@ -66,6 +66,7 @@ sales_config.json
 # Local secrets / overrides (never commit)
 data/global_config.local.json
 global_config.local.json
+data/integrations.local.json
 
 # Runtime state (optional)
 data/audit_logs.json

@@ -1215,7 +1215,7 @@ tbody td{padding:10px 13px;font-size:12px;vertical-align:middle}
           <input type="checkbox" id="kanbanOnlyAlert" onchange="renderKanban()" style="accent-color:var(--danger)"> <span data-i18n="common.only_alert">Solo con alerta</span>
         </label>
         <span style="margin-left:auto;font-size:11px;color:var(--muted)" id="kanbanCount"></span>
-        <button class="btn-outline btn-sm" onclick="renderKanban()"><i class="fa fa-rotate"></i> <span data-i18n="common.refresh">Actualizar</span></button>
+        <button class="btn-outline btn-sm" onclick="loadCustomKanbans().catch(()=>renderKanban())"><i class="fa fa-rotate"></i> <span data-i18n="common.refresh">Actualizar</span></button>
         <button class="btn-primary btn-sm" id="newKanbanBtn" style="margin-left:8px"><i class="fa fa-plus"></i> Nuevo Kanban</button>
       </div>
       <div class="kanban-tabs" id="kanbanTabs" style="margin-bottom:16px;display:flex;gap:8px;border-bottom:1px solid var(--border);padding-bottom:8px">
@@ -6319,8 +6319,8 @@ function showCreateKanbanModal() {
   modal.className = 'modal-overlay';
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
   modal.innerHTML = `
-    <div class="modal-content" style="width:450px">
-      <div class="modal-header">
+    <div class="modal" style="width:min(92vw,450px)" onclick="event.stopPropagation()">
+      <div class="modal-header" style="padding:18px 20px">
         <h2>Crear Nuevo Tablero</h2>
         <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">✕</button>
       </div>
@@ -6348,6 +6348,7 @@ function showCreateKanbanModal() {
     </div>
   `;
   document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add('active'));
 
   const typeEl = modal.querySelector('#newKbType');
   const colsWrap = modal.querySelector('#localColsWrap');

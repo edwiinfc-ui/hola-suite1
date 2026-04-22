@@ -1,22 +1,22 @@
 {
-  "updatedAt": "2026-04-17T22:33:57.746Z",
+  "updatedAt": "2026-04-22T22:04:04.077Z",
   "clientes": [
     {
       "id": "86b9fnnjc",
       "nombre": "OITI",
       "url": "https://app.clickup.com/t/86b9fnnjc",
-      "estado": "en kickoff",
+      "estado": "listo para instalación",
       "etapaAnterior": "Creado",
-      "etapaActual": "En Kickoff",
-      "log": "En KO",
+      "etapaActual": "Listo para Instalación",
+      "log": "L.Inst",
       "fInicio": 1776435210054,
       "fInicioFmt": "17/04/2026",
       "fActivacion": null,
       "fActivacionFmt": "",
       "fCancelacion": null,
       "fCancelacionFmt": "",
-      "fActualizado": 1776458364741,
-      "fActualizadoFmt": "17/04/2026",
+      "fActualizado": 1776865914333,
+      "fActualizadoFmt": "22/04/2026",
       "fConcluido": null,
       "fConcluidoFmt": "",
       "rKickoff": "",
@@ -33,17 +33,17 @@
       "ip": "",
       "ipPrimaria": "",
       "ipSecundaria": "",
-      "dominio": "",
-      "dominioPrincipal": "",
+      "dominio": "oiti.holasuite.com",
+      "dominioPrincipal": "oiti.holasuite.com",
       "dominio2": "",
-      "linkHola": "",
-      "dImpl": 0,
-      "mImpl": 0,
+      "linkHola": "https://oiti.holasuite.com",
+      "dImpl": 3,
+      "mImpl": 0.1,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
-      "dInstActual": 0,
+      "dInstActual": 3,
       "dCapActual": 0,
       "dActActual": 0,
       "dKickoffTotal": 0,
@@ -80,6 +80,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -124,8 +125,8 @@
       "fActivacionFmt": "",
       "fCancelacion": null,
       "fCancelacionFmt": "",
-      "fActualizado": 1776360984993,
-      "fActualizadoFmt": "16/04/2026",
+      "fActualizado": 1776888760848,
+      "fActualizadoFmt": "22/04/2026",
       "fConcluido": null,
       "fConcluidoFmt": "",
       "rKickoff": "",
@@ -146,15 +147,15 @@
       "dominioPrincipal": "",
       "dominio2": "",
       "linkHola": "",
-      "dImpl": 2,
-      "mImpl": 0.1,
+      "dImpl": 5,
+      "mImpl": 0.2,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 2,
+      "dActActual": 5,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -174,7 +175,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "NO",
-      "dSinMov": 1,
+      "dSinMov": 0,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -189,6 +190,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -255,15 +257,15 @@
       "dominioPrincipal": "wisptelecomuncaiones.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.153",
-      "dImpl": 3,
-      "mImpl": 0.1,
+      "dImpl": 6,
+      "mImpl": 0.2,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 3,
+      "dActActual": 6,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -283,7 +285,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "NO",
-      "dSinMov": 1,
+      "dSinMov": 6,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -298,6 +300,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -364,14 +367,14 @@
       "dominioPrincipal": "fibranetsolucionessas.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.149",
-      "dImpl": 5,
-      "mImpl": 0.2,
+      "dImpl": 8,
+      "mImpl": 0.3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 5,
+      "dCapActual": 8,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -392,7 +395,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "NO",
-      "dSinMov": 2,
+      "dSinMov": 7,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -407,6 +410,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -474,14 +478,14 @@
       "dominioPrincipal": "fibranetsoluciones.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.150.",
-      "dImpl": 5,
-      "mImpl": 0.2,
+      "dImpl": 8,
+      "mImpl": 0.3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 5,
+      "dCapActual": 8,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -502,7 +506,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "NO",
-      "dSinMov": 2,
+      "dSinMov": 7,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -517,6 +521,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -584,8 +589,8 @@
       "dominioPrincipal": "",
       "dominio2": "",
       "linkHola": "",
-      "dImpl": 6,
-      "mImpl": 0.2,
+      "dImpl": 9,
+      "mImpl": 0.3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
@@ -611,8 +616,8 @@
       "rVenta": "Maximiliano Azeglio",
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
-      "alerta": "NO",
-      "dSinMov": 7,
+      "alerta": "⚠️ Sin mov",
+      "dSinMov": 12,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -627,6 +632,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -672,8 +678,8 @@
       "fActivacionFmt": "",
       "fCancelacion": null,
       "fCancelacionFmt": "",
-      "fActualizado": 1776364622088,
-      "fActualizadoFmt": "16/04/2026",
+      "fActualizado": 1776695864993,
+      "fActualizadoFmt": "20/04/2026",
       "fConcluido": null,
       "fConcluidoFmt": "",
       "rKickoff": "Bruno Gabriel Rodrigues",
@@ -694,13 +700,13 @@
       "dominioPrincipal": "blue.holasuite.com",
       "dominio2": "",
       "linkHola": "https://blue.holasuite.com",
-      "dImpl": 12,
-      "mImpl": 0.4,
+      "dImpl": 15,
+      "mImpl": 0.5,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
-      "dInstActual": 12,
+      "dInstActual": 15,
       "dCapActual": 0,
       "dActActual": 0,
       "dKickoffTotal": 0,
@@ -722,7 +728,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "NO",
-      "dSinMov": 1,
+      "dSinMov": 2,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -737,6 +743,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -803,12 +810,12 @@
       "dominioPrincipal": "inyvigo.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.144",
-      "dImpl": 12,
-      "mImpl": 0.4,
+      "dImpl": 15,
+      "mImpl": 0.5,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
-      "dVerActual": 12,
+      "dVerActual": 15,
       "dInstActual": 0,
       "dCapActual": 0,
       "dActActual": 0,
@@ -831,7 +838,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "⚠️ Sin mov",
-      "dSinMov": 8,
+      "dSinMov": 13,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -846,6 +853,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -913,14 +921,14 @@
       "dominioPrincipal": "britel.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.147",
-      "dImpl": 14,
-      "mImpl": 0.5,
+      "dImpl": 17,
+      "mImpl": 0.6,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 14,
+      "dCapActual": 17,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -941,7 +949,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "NO",
-      "dSinMov": 2,
+      "dSinMov": 7,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -956,6 +964,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1022,15 +1031,15 @@
       "dominioPrincipal": "telepueblorrico.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.141",
-      "dImpl": 14,
-      "mImpl": 0.5,
+      "dImpl": 17,
+      "mImpl": 0.6,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 14,
+      "dActActual": 17,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -1050,7 +1059,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "⚠️ Sin mov",
-      "dSinMov": 8,
+      "dSinMov": 13,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -1065,6 +1074,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1131,11 +1141,11 @@
       "dominioPrincipal": "",
       "dominio2": "",
       "linkHola": "",
-      "dImpl": 15,
-      "mImpl": 0.5,
+      "dImpl": 18,
+      "mImpl": 0.6,
       "dUso": 0,
       "mUso": 0,
-      "dKickoffActual": 15,
+      "dKickoffActual": 18,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
@@ -1159,7 +1169,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "⚠️ Sin mov",
-      "dSinMov": 18,
+      "dSinMov": 23,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -1174,6 +1184,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1242,8 +1253,8 @@
       "linkHola": "https://10.243.0.77",
       "dImpl": 15,
       "mImpl": 0.5,
-      "dUso": 7,
-      "mUso": 0.2,
+      "dUso": 12,
+      "mUso": 0.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -1283,6 +1294,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1349,14 +1361,14 @@
       "dominioPrincipal": "fibercomec.holasuite.com",
       "dominio2": "",
       "linkHola": "https://fibercomec.holasuite.com",
-      "dImpl": 22,
-      "mImpl": 0.7,
+      "dImpl": 25,
+      "mImpl": 0.8,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 22,
+      "dCapActual": 25,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -1377,7 +1389,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 3,
+      "dSinMov": 8,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -1392,6 +1404,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1421,117 +1434,6 @@
       "dPausa": 0,
       "mesInicio": "Marzo 2026",
       "mesFin": "N/A"
-    },
-    {
-      "id": "86b8z76wq",
-      "nombre": "Edwin Franco",
-      "url": "https://app.clickup.com/t/86b8z76wq",
-      "estado": "concluído",
-      "etapaAnterior": "Creado",
-      "etapaActual": "Activo",
-      "log": "✅",
-      "fInicio": 1773933299190,
-      "fInicioFmt": "19/03/2026",
-      "fActivacion": 1773934298265,
-      "fActivacionFmt": "19/03/2026",
-      "fCancelacion": null,
-      "fCancelacionFmt": "",
-      "fActualizado": 1773934298265,
-      "fActualizadoFmt": "19/03/2026",
-      "fConcluido": 1773934298265,
-      "fConcluidoFmt": "19/03/2026",
-      "rKickoff": "Edwin Franco",
-      "rVer": "",
-      "rCap": "Edwin Franco",
-      "rCap2": "",
-      "capR1": 1,
-      "capR2": 0,
-      "rGoLive": "Edwin Franco",
-      "rAct": "Edwin Franco",
-      "rPBX": "",
-      "rFac": "",
-      "rCom": "Edwin Franco",
-      "ip": "",
-      "ipPrimaria": "",
-      "ipSecundaria": "",
-      "dominio": "",
-      "dominioPrincipal": "",
-      "dominio2": "",
-      "linkHola": "",
-      "dImpl": 1,
-      "mImpl": 0,
-      "dUso": 29,
-      "mUso": 1,
-      "dKickoffActual": 0,
-      "dVerActual": 0,
-      "dInstActual": 0,
-      "dCapActual": 0,
-      "dActActual": 0,
-      "dKickoffTotal": 0,
-      "dVerTotal": 0,
-      "dInstTotal": 0,
-      "dCapTotal": 0,
-      "dActTotal": 0,
-      "mesICap": "",
-      "mesFCap": "",
-      "mesAct": "Marzo 2026",
-      "cantCap": 0,
-      "hCap": 0,
-      "reunCap": 0,
-      "hKickoff": 1,
-      "hVer": 1,
-      "hGoLive": 1,
-      "hAct": 1,
-      "rVenta": "Edwin Franco",
-      "mensualidad": 0,
-      "status": "✅ Activo",
-      "alerta": "NO",
-      "dSinMov": 0,
-      "usoPlat": "NO",
-      "dUsoTotal": 0,
-      "mUsoTotal": 0,
-      "motivo": "N/A",
-      "tipoBaja": "",
-      "cantUsuariosExtra": 0,
-      "prodContratado": "Hola Suite + ¡Hola! IA",
-      "canales": {
-        "wa": "NO",
-        "ig": "SÍ",
-        "wc": "NO",
-        "pbx": "NO",
-        "tg": "NO",
-        "msg": "SÍ",
-        "tel": "NO"
-      },
-      "canalesBajados": {
-        "wa": "NO",
-        "ig": "NO",
-        "pbx": "NO",
-        "raw": []
-      },
-      "canalesArray": [
-        "instagram",
-        "messenger",
-        "¡hola! ia"
-      ],
-      "upgImpl": "NO",
-      "upgPost": "NO",
-      "upgradeOrigID": "",
-      "sinReq": "SÍ",
-      "pausada": "NO",
-      "espCli": "NO",
-      "espWis": "NO",
-      "moro": "NO",
-      "pais": "Argentina",
-      "plan": "Plan basic",
-      "email": "edwi@opasuite.com",
-      "telefono": "3345462",
-      "tipo": "Implementación",
-      "consCom": "NO",
-      "fuente": "ClickUp",
-      "dPausa": 0,
-      "mesInicio": "Marzo 2026",
-      "mesFin": "Marzo 2026"
     },
     {
       "id": "86b8z66v2",
@@ -1569,14 +1471,14 @@
       "dominioPrincipal": "dewcom.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.28",
-      "dImpl": 22,
-      "mImpl": 0.7,
+      "dImpl": 25,
+      "mImpl": 0.8,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 22,
+      "dCapActual": 25,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -1597,7 +1499,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 10,
+      "dSinMov": 15,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -1612,6 +1514,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1678,12 +1581,12 @@
       "dominioPrincipal": "",
       "dominio2": "",
       "linkHola": "",
-      "dImpl": 20,
-      "mImpl": 0.7,
+      "dImpl": 23,
+      "mImpl": 0.8,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
-      "dVerActual": 20,
+      "dVerActual": 23,
       "dInstActual": 0,
       "dCapActual": 0,
       "dActActual": 0,
@@ -1705,8 +1608,8 @@
       "rVenta": "Maximiliano Azeglio",
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
-      "alerta": "NO",
-      "dSinMov": 0,
+      "alerta": "🚨 +20 días",
+      "dSinMov": 5,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -1721,6 +1624,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1787,8 +1691,8 @@
       "dominioPrincipal": "linkingnet.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.59",
-      "dImpl": 22,
-      "mImpl": 0.7,
+      "dImpl": 25,
+      "mImpl": 0.8,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
@@ -1815,7 +1719,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 23,
+      "dSinMov": 28,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -1830,6 +1734,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -1898,8 +1803,8 @@
       "linkHola": "https://10.243.0.6",
       "dImpl": 2,
       "mImpl": 0.1,
-      "dUso": 29,
-      "mUso": 1,
+      "dUso": 34,
+      "mUso": 1.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -1939,6 +1844,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2005,14 +1911,14 @@
       "dominioPrincipal": "fibraslp.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.48",
-      "dImpl": 22,
-      "mImpl": 0.7,
+      "dImpl": 25,
+      "mImpl": 0.8,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 22,
+      "dCapActual": 25,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -2033,7 +1939,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 8,
+      "dSinMov": 13,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -2048,6 +1954,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2114,8 +2021,8 @@
       "dominioPrincipal": "",
       "dominio2": "",
       "linkHola": "",
-      "dImpl": 23,
-      "mImpl": 0.8,
+      "dImpl": 26,
+      "mImpl": 0.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
@@ -2142,7 +2049,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 1,
+      "dSinMov": 6,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -2157,6 +2064,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2223,8 +2131,8 @@
       "dominioPrincipal": "",
       "dominio2": "",
       "linkHola": "",
-      "dImpl": 24,
-      "mImpl": 0.8,
+      "dImpl": 27,
+      "mImpl": 0.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
@@ -2251,7 +2159,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 0,
+      "dSinMov": 5,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -2266,6 +2174,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2300,18 +2209,18 @@
       "id": "86b8x8p3y",
       "nombre": "TELECABLE GORGONA",
       "url": "https://app.clickup.com/t/86b8x8p3y",
-      "estado": "en capacitación",
+      "estado": "cancelado",
       "etapaAnterior": "Creado",
-      "etapaActual": "En Capacitación",
-      "log": "Cap",
+      "etapaActual": "Cancelado",
+      "log": "❌",
       "fInicio": 1773692777163,
       "fInicioFmt": "16/03/2026",
       "fActivacion": null,
       "fActivacionFmt": "",
-      "fCancelacion": null,
-      "fCancelacionFmt": "",
-      "fActualizado": 1775053182955,
-      "fActualizadoFmt": "01/04/2026",
+      "fCancelacion": 1776876556086,
+      "fCancelacionFmt": "22/04/2026",
+      "fActualizado": 1776876556086,
+      "fActualizadoFmt": "22/04/2026",
       "fConcluido": null,
       "fConcluidoFmt": "",
       "rKickoff": "Blitzangel Leon",
@@ -2332,14 +2241,14 @@
       "dominioPrincipal": "telecablegorgona.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.54",
-      "dImpl": 24,
-      "mImpl": 0.8,
+      "dImpl": 26,
+      "mImpl": 0.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 24,
+      "dCapActual": 0,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -2358,14 +2267,14 @@
       "hAct": 0,
       "rVenta": "Larissa Elizabeth",
       "mensualidad": 0,
-      "status": "⚙️ En Implementación",
-      "alerta": "🚨 +20 días",
-      "dSinMov": 16,
+      "status": "❌ Cancelado",
+      "alerta": "NO",
+      "dSinMov": 0,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
-      "motivo": "N/A",
-      "tipoBaja": "",
+      "motivo": "Desistio de la implementación",
+      "tipoBaja": "Producto",
       "cantUsuariosExtra": 0,
       "prodContratado": "Hola! Suite",
       "canales": {
@@ -2375,6 +2284,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2441,14 +2351,14 @@
       "dominioPrincipal": "comcanet.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.21",
-      "dImpl": 25,
-      "mImpl": 0.8,
+      "dImpl": 28,
+      "mImpl": 0.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 25,
+      "dCapActual": 28,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -2469,7 +2379,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 8,
+      "dSinMov": 13,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -2484,6 +2394,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -2551,14 +2462,14 @@
       "dominioPrincipal": "viveinternet.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.58",
-      "dImpl": 24,
-      "mImpl": 0.8,
+      "dImpl": 27,
+      "mImpl": 0.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 24,
+      "dCapActual": 27,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -2579,7 +2490,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 8,
+      "dSinMov": 13,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -2594,6 +2505,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2660,14 +2572,14 @@
       "dominioPrincipal": "vivetel.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.122",
-      "dImpl": 24,
-      "mImpl": 0.8,
+      "dImpl": 27,
+      "mImpl": 0.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 24,
+      "dCapActual": 27,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -2688,7 +2600,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 2,
+      "dSinMov": 7,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -2703,6 +2615,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2769,12 +2682,12 @@
       "dominioPrincipal": "",
       "dominio2": "",
       "linkHola": "",
-      "dImpl": 24,
-      "mImpl": 0.8,
+      "dImpl": 27,
+      "mImpl": 0.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
-      "dVerActual": 24,
+      "dVerActual": 27,
       "dInstActual": 0,
       "dCapActual": 0,
       "dActActual": 0,
@@ -2797,7 +2710,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 4,
+      "dSinMov": 9,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -2812,6 +2725,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2880,8 +2794,8 @@
       "linkHola": "https://10.243.0.83",
       "dImpl": 18,
       "mImpl": 0.6,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -2921,6 +2835,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -2989,8 +2904,8 @@
       "linkHola": "https://10.243.0.27",
       "dImpl": 23,
       "mImpl": 0.8,
-      "dUso": 1,
-      "mUso": 0,
+      "dUso": 6,
+      "mUso": 0.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -3030,6 +2945,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3064,20 +2980,20 @@
       "id": "86b8wzhba",
       "nombre": "NEXYS",
       "url": "https://app.clickup.com/t/86b8wzhba",
-      "estado": "en capacitación",
+      "estado": "concluído",
       "etapaAnterior": "Creado",
-      "etapaActual": "En Capacitación",
-      "log": "Cap",
+      "etapaActual": "Activo",
+      "log": "✅",
       "fInicio": 1773669499284,
       "fInicioFmt": "16/03/2026",
-      "fActivacion": null,
-      "fActivacionFmt": "",
+      "fActivacion": 1776699617370,
+      "fActivacionFmt": "20/04/2026",
       "fCancelacion": null,
       "fCancelacionFmt": "",
-      "fActualizado": 1774286425267,
-      "fActualizadoFmt": "23/03/2026",
-      "fConcluido": null,
-      "fConcluidoFmt": "",
+      "fActualizado": 1776699617370,
+      "fActualizadoFmt": "20/04/2026",
+      "fConcluido": 1776699617370,
+      "fConcluidoFmt": "20/04/2026",
       "rKickoff": "Blitzangel Leon",
       "rVer": "Edwin Franco",
       "rCap": "Edwin Franco",
@@ -3096,14 +3012,14 @@
       "dominioPrincipal": "nexys.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.16",
-      "dImpl": 23,
+      "dImpl": 24,
       "mImpl": 0.8,
-      "dUso": 0,
-      "mUso": 0,
+      "dUso": 2,
+      "mUso": 0.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 23,
+      "dCapActual": 0,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -3112,19 +3028,19 @@
       "dActTotal": 0,
       "mesICap": "",
       "mesFCap": "",
-      "mesAct": "",
+      "mesAct": "Abril 2026",
       "cantCap": 0,
       "hCap": 0,
       "reunCap": 0,
-      "hKickoff": 0,
-      "hVer": 0,
-      "hGoLive": 0,
-      "hAct": 0,
+      "hKickoff": 1,
+      "hVer": 1,
+      "hGoLive": 1,
+      "hAct": 1,
       "rVenta": "Larissa Elizabeth",
       "mensualidad": 0,
-      "status": "⚙️ En Implementación",
-      "alerta": "🚨 +20 días",
-      "dSinMov": 25,
+      "status": "✅ Activo",
+      "alerta": "NO",
+      "dSinMov": 0,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -3139,6 +3055,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3167,7 +3084,7 @@
       "fuente": "ClickUp",
       "dPausa": 0,
       "mesInicio": "Marzo 2026",
-      "mesFin": "N/A"
+      "mesFin": "Abril 2026"
     },
     {
       "id": "86b8qkqgb",
@@ -3205,14 +3122,14 @@
       "dominioPrincipal": "telkomiot.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.74.",
-      "dImpl": 33,
-      "mImpl": 1.1,
+      "dImpl": 36,
+      "mImpl": 1.2,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 33,
+      "dCapActual": 36,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -3233,7 +3150,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 8,
+      "dSinMov": 13,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -3248,6 +3165,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3314,15 +3232,15 @@
       "dominioPrincipal": "cibernauta.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.13",
-      "dImpl": 33,
-      "mImpl": 1.1,
+      "dImpl": 36,
+      "mImpl": 1.2,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 33,
+      "dActActual": 36,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -3342,7 +3260,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 24,
+      "dSinMov": 29,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -3357,6 +3275,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3466,6 +3385,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3532,14 +3452,14 @@
       "dominioPrincipal": "fibraplus.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.57",
-      "dImpl": 34,
-      "mImpl": 1.1,
+      "dImpl": 37,
+      "mImpl": 1.2,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 34,
+      "dCapActual": 37,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -3560,7 +3480,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 0,
+      "dSinMov": 5,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -3575,6 +3495,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3684,6 +3605,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3718,20 +3640,20 @@
       "id": "86b8p4qxe",
       "nombre": "AIRNET SERVICIOS INTERNET",
       "url": "https://app.clickup.com/t/86b8p4qxe",
-      "estado": "en analisis meta",
+      "estado": "concluído",
       "etapaAnterior": "Creado",
-      "etapaActual": "Análisis de Meta",
-      "log": "Anal.Meta",
+      "etapaActual": "Activo",
+      "log": "✅",
       "fInicio": 1772194073768,
       "fInicioFmt": "27/02/2026",
-      "fActivacion": null,
-      "fActivacionFmt": "",
+      "fActivacion": 1776719000436,
+      "fActivacionFmt": "20/04/2026",
       "fCancelacion": null,
       "fCancelacionFmt": "",
-      "fActualizado": 1775053782720,
-      "fActualizadoFmt": "01/04/2026",
-      "fConcluido": null,
-      "fConcluidoFmt": "",
+      "fActualizado": 1776719000436,
+      "fActualizadoFmt": "20/04/2026",
+      "fConcluido": 1776719000436,
+      "fConcluidoFmt": "20/04/2026",
       "rKickoff": "Blitzangel Leon",
       "rVer": "Mariane Teló",
       "rCap": "Mariane Teló",
@@ -3750,12 +3672,12 @@
       "dominioPrincipal": "airnet.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.121",
-      "dImpl": 34,
-      "mImpl": 1.1,
-      "dUso": 0,
-      "mUso": 0,
+      "dImpl": 35,
+      "mImpl": 1.2,
+      "dUso": 2,
+      "mUso": 0.1,
       "dKickoffActual": 0,
-      "dVerActual": 34,
+      "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
       "dActActual": 0,
@@ -3766,26 +3688,26 @@
       "dActTotal": 0,
       "mesICap": "",
       "mesFCap": "",
-      "mesAct": "",
+      "mesAct": "Abril 2026",
       "cantCap": 0,
       "hCap": 0,
       "reunCap": 0,
-      "hKickoff": 0,
-      "hVer": 0,
+      "hKickoff": 1,
+      "hVer": 1,
       "hGoLive": 1,
-      "hAct": 0,
+      "hAct": 1,
       "rVenta": "Larissa Elizabeth",
       "mensualidad": 0,
-      "status": "⚙️ En Implementación",
-      "alerta": "🚨 +20 días",
-      "dSinMov": 16,
+      "status": "✅ Activo",
+      "alerta": "NO",
+      "dSinMov": 0,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
       "motivo": "N/A",
       "tipoBaja": "",
       "cantUsuariosExtra": 0,
-      "prodContratado": "Hola! Suite",
+      "prodContratado": "Hola Suite + ¡Hola! IA",
       "canales": {
         "wa": "SÍ",
         "ig": "NO",
@@ -3793,6 +3715,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3821,7 +3744,7 @@
       "fuente": "ClickUp",
       "dPausa": 0,
       "mesInicio": "Febrero 2026",
-      "mesFin": "N/A"
+      "mesFin": "Abril 2026"
     },
     {
       "id": "86b8muhcv",
@@ -3859,14 +3782,14 @@
       "dominioPrincipal": "rocanet.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.11",
-      "dImpl": 39,
-      "mImpl": 1.3,
+      "dImpl": 42,
+      "mImpl": 1.4,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 39,
+      "dCapActual": 42,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -3887,7 +3810,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 24,
+      "dSinMov": 29,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -3902,6 +3825,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -3971,8 +3895,8 @@
       "linkHola": "https://10.243.0.123",
       "dImpl": 27,
       "mImpl": 0.9,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -4012,6 +3936,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4046,46 +3971,46 @@
       "id": "86b8mqer6",
       "nombre": "CONECTAR",
       "url": "https://app.clickup.com/t/86b8mqer6",
-      "estado": "en analisis meta",
+      "estado": "en capacitación",
       "etapaAnterior": "Creado",
-      "etapaActual": "Análisis de Meta",
-      "log": "Anal.Meta",
+      "etapaActual": "En Capacitación",
+      "log": "Cap",
       "fInicio": 1771952503575,
       "fInicioFmt": "24/02/2026",
       "fActivacion": null,
       "fActivacionFmt": "",
       "fCancelacion": null,
       "fCancelacionFmt": "",
-      "fActualizado": 1776347833716,
-      "fActualizadoFmt": "16/04/2026",
+      "fActualizado": 1776862336855,
+      "fActualizadoFmt": "22/04/2026",
       "fConcluido": null,
       "fConcluidoFmt": "",
       "rKickoff": "Blitzangel Leon",
-      "rVer": "",
-      "rCap": "",
+      "rVer": "Edwin Franco",
+      "rCap": "Edwin Franco",
       "rCap2": "",
-      "capR1": 0,
+      "capR1": 1,
       "capR2": 0,
-      "rGoLive": "",
-      "rAct": "",
+      "rGoLive": "Edwin Franco",
+      "rAct": "Edwin Franco",
       "rPBX": "",
       "rFac": "",
       "rCom": "Maximiliano Azeglio",
-      "ip": "",
-      "ipPrimaria": "",
+      "ip": "10.243.0.155",
+      "ipPrimaria": "10.243.0.155",
       "ipSecundaria": "",
-      "dominio": "",
-      "dominioPrincipal": "",
+      "dominio": "conectar.holasuite.com",
+      "dominioPrincipal": "conectar.holasuite.com",
       "dominio2": "",
-      "linkHola": "",
-      "dImpl": 35,
-      "mImpl": 1.2,
+      "linkHola": "https://10.243.0.155",
+      "dImpl": 38,
+      "mImpl": 1.3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
-      "dVerActual": 35,
+      "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 0,
+      "dCapActual": 38,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -4100,13 +4025,13 @@
       "reunCap": 0,
       "hKickoff": 0,
       "hVer": 0,
-      "hGoLive": 0,
+      "hGoLive": 1,
       "hAct": 0,
       "rVenta": "Maximiliano Azeglio",
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 1,
+      "dSinMov": 0,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -4121,6 +4046,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4189,8 +4115,8 @@
       "linkHola": "https://10.243.0.120",
       "dImpl": 17,
       "mImpl": 0.6,
-      "dUso": 29,
-      "mUso": 1,
+      "dUso": 34,
+      "mUso": 1.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -4230,6 +4156,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4298,8 +4225,8 @@
       "linkHola": "https://netteconecta.holasuite.com",
       "dImpl": 27,
       "mImpl": 0.9,
-      "dUso": 16,
-      "mUso": 0.5,
+      "dUso": 21,
+      "mUso": 0.7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -4339,6 +4266,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4405,12 +4333,12 @@
       "dominioPrincipal": "avc.holasuite.com",
       "dominio2": "",
       "linkHola": "https://avc.holasuite.com",
-      "dImpl": 36,
-      "mImpl": 1.2,
+      "dImpl": 39,
+      "mImpl": 1.3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
-      "dVerActual": 36,
+      "dVerActual": 39,
       "dInstActual": 0,
       "dCapActual": 0,
       "dActActual": 0,
@@ -4433,7 +4361,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 1,
+      "dSinMov": 6,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -4448,6 +4376,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4516,8 +4445,8 @@
       "linkHola": "https://10.243.0.5",
       "dImpl": 18,
       "mImpl": 0.6,
-      "dUso": 32,
-      "mUso": 1.1,
+      "dUso": 37,
+      "mUso": 1.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -4557,6 +4486,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4625,8 +4555,8 @@
       "linkHola": "https://10.243.0.20",
       "dImpl": 35,
       "mImpl": 1.2,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -4666,6 +4596,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4734,8 +4665,8 @@
       "linkHola": "https://10.243.0.89",
       "dImpl": 39,
       "mImpl": 1.3,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -4775,6 +4706,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4843,8 +4775,8 @@
       "linkHola": "https://10.243.0.70",
       "dImpl": 38,
       "mImpl": 1.3,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -4879,11 +4811,12 @@
       "prodContratado": "Hola! Suite",
       "canales": {
         "wa": "SÍ",
-        "ig": "NO",
+        "ig": "SÍ",
         "wc": "NO",
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -4895,6 +4828,7 @@
         ]
       },
       "canalesArray": [
+        "instagram",
         "whatsapp"
       ],
       "upgImpl": "NO",
@@ -4995,6 +4929,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5063,8 +4998,8 @@
       "linkHola": "https://10.243.0.116",
       "dImpl": 36,
       "mImpl": 1.2,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -5104,6 +5039,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5170,12 +5106,12 @@
       "dominioPrincipal": "iosupply.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.12",
-      "dImpl": 49,
-      "mImpl": 1.6,
+      "dImpl": 52,
+      "mImpl": 1.7,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
-      "dVerActual": 49,
+      "dVerActual": 52,
       "dInstActual": 0,
       "dCapActual": 0,
       "dActActual": 0,
@@ -5198,7 +5134,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 0,
+      "dSinMov": 5,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -5213,6 +5149,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5322,6 +5259,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5390,8 +5328,8 @@
       "linkHola": "https://10.243.0.75",
       "dImpl": 45,
       "mImpl": 1.5,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -5431,6 +5369,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5546,6 +5485,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5620,8 +5560,8 @@
       "linkHola": "https://10.243.0.39",
       "dImpl": 49,
       "mImpl": 1.6,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -5661,6 +5601,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5772,6 +5713,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5842,8 +5784,8 @@
       "linkHola": "https://10.243.0.10",
       "dImpl": 50,
       "mImpl": 1.7,
-      "dUso": 7,
-      "mUso": 0.2,
+      "dUso": 12,
+      "mUso": 0.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -5883,6 +5825,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -5953,8 +5896,8 @@
       "linkHola": "https://10.243.0.17",
       "dImpl": 47,
       "mImpl": 1.6,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -5994,6 +5937,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -6064,8 +6008,8 @@
       "linkHola": "https://10.242.0.67",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 78,
-      "mUso": 2.6,
+      "dUso": 83,
+      "mUso": 2.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -6105,6 +6049,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -6179,8 +6124,8 @@
       "linkHola": "https://10.243.0.83",
       "dImpl": 50,
       "mImpl": 1.7,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -6220,6 +6165,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -6289,8 +6235,8 @@
       "linkHola": "https://10.243.0.25",
       "dImpl": 49,
       "mImpl": 1.6,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -6330,6 +6276,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -6400,8 +6347,8 @@
       "linkHola": "https://10.243.0.50",
       "dImpl": 56,
       "mImpl": 1.9,
-      "dUso": 2,
-      "mUso": 0.1,
+      "dUso": 7,
+      "mUso": 0.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -6441,6 +6388,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -6509,8 +6457,8 @@
       "linkHola": "https://10.243.0.82",
       "dImpl": 52,
       "mImpl": 1.7,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -6550,6 +6498,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -6661,6 +6610,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -6672,8 +6622,8 @@
         ]
       },
       "canalesArray": [
-        "whatsapp",
-        "telefonia"
+        "telefonia",
+        "whatsapp"
       ],
       "upgImpl": "SÍ",
       "upgPost": "NO",
@@ -6730,14 +6680,14 @@
       "dominioPrincipal": "sl-red.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.148",
-      "dImpl": 56,
-      "mImpl": 1.9,
+      "dImpl": 59,
+      "mImpl": 2,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 56,
+      "dCapActual": 59,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -6758,7 +6708,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 1,
+      "dSinMov": 6,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -6773,6 +6723,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -6819,8 +6770,8 @@
       "fActivacionFmt": "",
       "fCancelacion": null,
       "fCancelacionFmt": "",
-      "fActualizado": 1775763723468,
-      "fActualizadoFmt": "09/04/2026",
+      "fActualizado": 1776461726373,
+      "fActualizadoFmt": "17/04/2026",
       "fConcluido": null,
       "fConcluidoFmt": "",
       "rKickoff": "Edwin Franco",
@@ -6841,15 +6792,15 @@
       "dominioPrincipal": "cyd.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.30",
-      "dImpl": 59,
-      "mImpl": 2,
+      "dImpl": 62,
+      "mImpl": 2.1,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 59,
+      "dActActual": 62,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -6869,7 +6820,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 8,
+      "dSinMov": 5,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -6884,6 +6835,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -6995,6 +6947,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7065,8 +7018,8 @@
       "linkHola": "https://10.243.0.33",
       "dImpl": 55,
       "mImpl": 1.8,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -7106,6 +7059,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7176,8 +7130,8 @@
       "linkHola": "https://10.243.0.78",
       "dImpl": 59,
       "mImpl": 2,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -7217,6 +7171,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7287,8 +7242,8 @@
       "linkHola": "https://10.243.0.65",
       "dImpl": 58,
       "mImpl": 1.9,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -7328,6 +7283,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7396,8 +7352,8 @@
       "dominioPrincipal": "conexin.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.242.1.121",
-      "dImpl": 65,
-      "mImpl": 2.2,
+      "dImpl": 68,
+      "mImpl": 2.3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
@@ -7424,7 +7380,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 29,
+      "dSinMov": 34,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -7439,6 +7395,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7550,6 +7507,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7663,6 +7621,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7735,8 +7694,8 @@
       "linkHola": "https://10.243.0.84",
       "dImpl": 59,
       "mImpl": 2,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -7776,6 +7735,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7846,8 +7806,8 @@
       "linkHola": "https://10.243.0.31",
       "dImpl": 60,
       "mImpl": 2,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -7887,6 +7847,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -7957,8 +7918,8 @@
       "linkHola": "https://10.243.0.71",
       "dImpl": 51,
       "mImpl": 1.7,
-      "dUso": 30,
-      "mUso": 1,
+      "dUso": 35,
+      "mUso": 1.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -7998,6 +7959,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8068,8 +8030,8 @@
       "linkHola": "https://10.243.0.64",
       "dImpl": 61,
       "mImpl": 2,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -8109,6 +8071,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8177,14 +8140,14 @@
       "dominioPrincipal": "conexionet.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.146",
-      "dImpl": 70,
-      "mImpl": 2.3,
+      "dImpl": 73,
+      "mImpl": 2.4,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 70,
+      "dCapActual": 73,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -8205,7 +8168,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 7,
+      "dSinMov": 12,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -8220,6 +8183,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8290,8 +8254,8 @@
       "linkHola": "https://10.243.0.23",
       "dImpl": 64,
       "mImpl": 2.1,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -8331,6 +8295,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -8400,8 +8365,8 @@
       "linkHola": "https://10.245.0.199",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 101,
-      "mUso": 3.4,
+      "dUso": 106,
+      "mUso": 3.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -8441,6 +8406,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8513,8 +8479,8 @@
       "linkHola": "https://10.243.0.76",
       "dImpl": 67,
       "mImpl": 2.2,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -8554,6 +8520,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8628,8 +8595,8 @@
       "linkHola": "https://10.243.0.61",
       "dImpl": 65,
       "mImpl": 2.2,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -8669,6 +8636,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8739,8 +8707,8 @@
       "linkHola": "https://10.243.0.24",
       "dImpl": 65,
       "mImpl": 2.2,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -8780,6 +8748,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8850,8 +8819,8 @@
       "linkHola": "https://10.245.0.117",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 102,
-      "mUso": 3.4,
+      "dUso": 107,
+      "mUso": 3.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -8891,6 +8860,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -8961,8 +8931,8 @@
       "linkHola": "https://10.243.0.81",
       "dImpl": 64,
       "mImpl": 2.1,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -9002,6 +8972,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9072,8 +9043,8 @@
       "linkHola": "https://10.243.0.117",
       "dImpl": 70,
       "mImpl": 2.3,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -9113,6 +9084,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9183,8 +9155,8 @@
       "linkHola": "https://10.243.0.55",
       "dImpl": 76,
       "mImpl": 2.5,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -9224,6 +9196,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9335,6 +9308,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9405,8 +9379,8 @@
       "linkHola": "https://10.243.0.29",
       "dImpl": 73,
       "mImpl": 2.4,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -9446,6 +9420,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9557,6 +9532,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9627,8 +9603,8 @@
       "linkHola": "https://10.243.0.69",
       "dImpl": 78,
       "mImpl": 2.6,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -9668,6 +9644,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9736,8 +9713,8 @@
       "dominioPrincipal": "upcnecochea.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.79",
-      "dImpl": 86,
-      "mImpl": 2.9,
+      "dImpl": 89,
+      "mImpl": 3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
@@ -9764,7 +9741,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 9,
+      "dSinMov": 14,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -9779,6 +9756,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -9849,8 +9827,8 @@
       "linkHola": "https://10.243.0.53",
       "dImpl": 78,
       "mImpl": 2.6,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -9890,6 +9868,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10001,6 +9980,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10112,6 +10092,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10221,6 +10202,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10332,6 +10314,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10400,15 +10383,15 @@
       "dominioPrincipal": "netifox.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.62",
-      "dImpl": 100,
-      "mImpl": 3.3,
+      "dImpl": 103,
+      "mImpl": 3.4,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 100,
+      "dActActual": 103,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -10428,7 +10411,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 11,
+      "dSinMov": 16,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -10443,6 +10426,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10513,8 +10497,8 @@
       "linkHola": "https://10.243.0.37",
       "dImpl": 91,
       "mImpl": 3,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -10554,6 +10538,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10665,6 +10650,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10733,15 +10719,15 @@
       "dominioPrincipal": "serpronet.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.68",
-      "dImpl": 109,
-      "mImpl": 3.6,
+      "dImpl": 112,
+      "mImpl": 3.7,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 109,
+      "dActActual": 112,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -10761,7 +10747,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 11,
+      "dSinMov": 16,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -10776,6 +10762,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10846,8 +10833,8 @@
       "linkHola": "https://10.243.0.67",
       "dImpl": 98,
       "mImpl": 3.3,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -10887,6 +10874,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -10957,8 +10945,8 @@
       "linkHola": "https://10.243.0.47",
       "dImpl": 105,
       "mImpl": 3.5,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -10998,6 +10986,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11068,8 +11057,8 @@
       "linkHola": "https://10.243.0.60",
       "dImpl": 105,
       "mImpl": 3.5,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -11109,6 +11098,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11220,6 +11210,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11290,8 +11281,8 @@
       "linkHola": "https://10.243.0.63",
       "dImpl": 105,
       "mImpl": 3.5,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -11331,6 +11322,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11401,8 +11393,8 @@
       "linkHola": "https://10.243.0.51",
       "dImpl": 113,
       "mImpl": 3.8,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -11442,6 +11434,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11512,8 +11505,8 @@
       "linkHola": "https://10.243.0.80",
       "dImpl": 114,
       "mImpl": 3.8,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -11553,6 +11546,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11623,8 +11617,8 @@
       "linkHola": "https://10.243.0.26",
       "dImpl": 109,
       "mImpl": 3.6,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -11664,6 +11658,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11775,6 +11770,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11886,6 +11882,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -11956,8 +11953,8 @@
       "linkHola": "https://10.245.1.149",
       "dImpl": 47,
       "mImpl": 1.6,
-      "dUso": 101,
-      "mUso": 3.4,
+      "dUso": 106,
+      "mUso": 3.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -11997,6 +11994,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -12069,8 +12067,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 176,
-      "mUso": 5.9,
+      "dUso": 181,
+      "mUso": 6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12110,6 +12108,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12180,8 +12179,8 @@
       "linkHola": "",
       "dImpl": 5,
       "mImpl": 0.2,
-      "dUso": 171,
-      "mUso": 5.7,
+      "dUso": 176,
+      "mUso": 5.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12221,6 +12220,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12291,8 +12291,8 @@
       "linkHola": "https://10.243.0.88",
       "dImpl": 116,
       "mImpl": 3.9,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12332,6 +12332,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12402,8 +12403,8 @@
       "linkHola": "https://10.243.0.18",
       "dImpl": 113,
       "mImpl": 3.8,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12443,6 +12444,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12513,8 +12515,8 @@
       "linkHola": "https://10.243.0.52",
       "dImpl": 117,
       "mImpl": 3.9,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12554,6 +12556,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12624,8 +12627,8 @@
       "linkHola": "https://10.243.0.49",
       "dImpl": 115,
       "mImpl": 3.8,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12665,6 +12668,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12735,8 +12739,8 @@
       "linkHola": "https://10.243.0.40",
       "dImpl": 118,
       "mImpl": 3.9,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12776,6 +12780,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12887,6 +12892,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -12957,8 +12963,8 @@
       "linkHola": "https://10.243.0.19",
       "dImpl": 117,
       "mImpl": 3.9,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -12998,6 +13004,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13068,8 +13075,8 @@
       "linkHola": "https://10.243.0.38",
       "dImpl": 120,
       "mImpl": 4,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -13109,6 +13116,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13220,6 +13228,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13290,8 +13299,8 @@
       "linkHola": "https://10.243.0.110",
       "dImpl": 131,
       "mImpl": 4.4,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -13331,6 +13340,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13397,8 +13407,8 @@
       "linkHola": "https://10.243.0.14",
       "dImpl": 123,
       "mImpl": 4.1,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -13438,6 +13448,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13549,6 +13560,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13660,6 +13672,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13771,6 +13784,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13882,6 +13896,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -13952,8 +13967,8 @@
       "linkHola": "https://10.243.0.36",
       "dImpl": 136,
       "mImpl": 4.5,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -13993,6 +14008,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14063,8 +14079,8 @@
       "linkHola": "https://10.242.0.226",
       "dImpl": 66,
       "mImpl": 2.2,
-      "dUso": 100,
-      "mUso": 3.3,
+      "dUso": 105,
+      "mUso": 3.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -14104,6 +14120,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14174,8 +14191,8 @@
       "linkHola": "https://10.243.0.34",
       "dImpl": 130,
       "mImpl": 4.3,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -14215,6 +14232,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14285,8 +14303,8 @@
       "linkHola": "",
       "dImpl": 18,
       "mImpl": 0.6,
-      "dUso": 179,
-      "mUso": 6,
+      "dUso": 184,
+      "mUso": 6.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -14326,6 +14344,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14396,8 +14415,8 @@
       "linkHola": "",
       "dImpl": 35,
       "mImpl": 1.2,
-      "dUso": 157,
-      "mUso": 5.2,
+      "dUso": 162,
+      "mUso": 5.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -14437,6 +14456,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14548,6 +14568,7 @@
         "pbx": "NO",
         "tg": "SÍ",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14626,8 +14647,8 @@
       "linkHola": "https://10.243.0.102",
       "dImpl": 139,
       "mImpl": 4.6,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -14667,6 +14688,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14778,6 +14800,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14889,6 +14912,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -14959,8 +14983,8 @@
       "linkHola": "https://cirtelcomunicaciones.holasuite.com",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 210,
-      "mUso": 7,
+      "dUso": 215,
+      "mUso": 7.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15000,6 +15024,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15066,8 +15091,8 @@
       "linkHola": "https://10.243.0.44",
       "dImpl": 142,
       "mImpl": 4.7,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15107,6 +15132,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15177,8 +15203,8 @@
       "linkHola": "https://10.243.0.42",
       "dImpl": 137,
       "mImpl": 4.6,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15218,6 +15244,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15329,6 +15356,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15399,8 +15427,8 @@
       "linkHola": "https://meganet.holasuite.com",
       "dImpl": 50,
       "mImpl": 1.7,
-      "dUso": 142,
-      "mUso": 4.7,
+      "dUso": 147,
+      "mUso": 4.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15440,6 +15468,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15510,8 +15539,8 @@
       "linkHola": "https://10.243.0.96",
       "dImpl": 141,
       "mImpl": 4.7,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15551,6 +15580,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15621,8 +15651,8 @@
       "linkHola": "https://10.243.0.99",
       "dImpl": 147,
       "mImpl": 4.9,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15662,6 +15692,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15732,8 +15763,8 @@
       "linkHola": "https://10.243.0.90",
       "dImpl": 141,
       "mImpl": 4.7,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15773,6 +15804,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -15843,8 +15875,8 @@
       "linkHola": "https://10.243.0.45",
       "dImpl": 140,
       "mImpl": 4.7,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15884,6 +15916,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -15956,8 +15989,8 @@
       "linkHola": "https://10.243.0.46",
       "dImpl": 141,
       "mImpl": 4.7,
-      "dUso": 11,
-      "mUso": 0.4,
+      "dUso": 16,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -15997,6 +16030,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16067,8 +16101,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 221,
-      "mUso": 7.4,
+      "dUso": 226,
+      "mUso": 7.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16108,6 +16142,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16178,8 +16213,8 @@
       "linkHola": "https://10.243.0.113",
       "dImpl": 153,
       "mImpl": 5.1,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16219,6 +16254,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16330,6 +16366,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16400,8 +16437,8 @@
       "linkHola": "https://10.243.0.112",
       "dImpl": 150,
       "mImpl": 5,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16441,6 +16478,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -16512,8 +16550,8 @@
       "linkHola": "https://10.243.0.98",
       "dImpl": 150,
       "mImpl": 5,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16553,6 +16591,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16623,8 +16662,8 @@
       "linkHola": "https://10.243.0.108",
       "dImpl": 151,
       "mImpl": 5,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16664,6 +16703,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16734,8 +16774,8 @@
       "linkHola": "https://10.243.0.110",
       "dImpl": 156,
       "mImpl": 5.2,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16775,6 +16815,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16845,8 +16886,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 232,
-      "mUso": 7.7,
+      "dUso": 237,
+      "mUso": 7.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16886,6 +16927,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -16956,8 +16998,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 235,
-      "mUso": 7.8,
+      "dUso": 240,
+      "mUso": 8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -16997,6 +17039,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17108,6 +17151,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17178,8 +17222,8 @@
       "linkHola": "https://10.243.0.109",
       "dImpl": 159,
       "mImpl": 5.3,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17219,6 +17263,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17289,8 +17334,8 @@
       "linkHola": "https://10.243.0.111",
       "dImpl": 162,
       "mImpl": 5.4,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17330,6 +17375,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17400,8 +17446,8 @@
       "linkHola": "https://10.243.0.114",
       "dImpl": 153,
       "mImpl": 5.1,
-      "dUso": 16,
-      "mUso": 0.5,
+      "dUso": 21,
+      "mUso": 0.7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17441,6 +17487,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17511,8 +17558,8 @@
       "linkHola": "https://10.243.0.97",
       "dImpl": 159,
       "mImpl": 5.3,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17552,6 +17599,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17622,8 +17670,8 @@
       "linkHola": "https://10.243.0.94",
       "dImpl": 164,
       "mImpl": 5.5,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17663,6 +17711,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17733,8 +17782,8 @@
       "linkHola": "",
       "dImpl": 3,
       "mImpl": 0.1,
-      "dUso": 241,
-      "mUso": 8,
+      "dUso": 246,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17774,6 +17823,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17844,8 +17894,8 @@
       "linkHola": "https://10.242.0.137",
       "dImpl": 28,
       "mImpl": 0.9,
-      "dUso": 206,
-      "mUso": 6.9,
+      "dUso": 211,
+      "mUso": 7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17885,6 +17935,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -17955,8 +18006,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 246,
-      "mUso": 8.2,
+      "dUso": 251,
+      "mUso": 8.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -17996,6 +18047,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18062,8 +18114,8 @@
       "linkHola": "",
       "dImpl": 7,
       "mImpl": 0.2,
-      "dUso": 240,
-      "mUso": 8,
+      "dUso": 245,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -18103,6 +18155,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18214,6 +18267,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18284,8 +18338,8 @@
       "linkHola": "https://10.243.0.107",
       "dImpl": 166,
       "mImpl": 5.5,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -18325,6 +18379,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18395,8 +18450,8 @@
       "linkHola": "https://10.243.0.105",
       "dImpl": 166,
       "mImpl": 5.5,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -18436,6 +18491,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18506,8 +18562,8 @@
       "linkHola": "https://10.243.0.91",
       "dImpl": 172,
       "mImpl": 5.7,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -18547,6 +18603,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18619,8 +18676,8 @@
       "linkHola": "",
       "dImpl": 14,
       "mImpl": 0.5,
-      "dUso": 241,
-      "mUso": 8,
+      "dUso": 246,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -18660,6 +18717,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18726,8 +18784,8 @@
       "linkHola": "",
       "dImpl": 17,
       "mImpl": 0.6,
-      "dUso": 240,
-      "mUso": 8,
+      "dUso": 245,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -18767,6 +18825,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18837,8 +18896,8 @@
       "linkHola": "https://10.243.0.134",
       "dImpl": 180,
       "mImpl": 6,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -18878,6 +18937,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -18946,14 +19006,14 @@
       "dominioPrincipal": "terago.holasuite.com",
       "dominio2": "",
       "linkHola": "https://terago.holasuite.com",
-      "dImpl": 187,
-      "mImpl": 6.2,
+      "dImpl": 190,
+      "mImpl": 6.3,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
-      "dCapActual": 187,
+      "dCapActual": 190,
       "dActActual": 0,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
@@ -18974,7 +19034,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 156,
+      "dSinMov": 161,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -18989,6 +19049,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19059,8 +19120,8 @@
       "linkHola": "https://10.243.0.92",
       "dImpl": 182,
       "mImpl": 6.1,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -19100,6 +19161,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19170,8 +19232,8 @@
       "linkHola": "https://10.243.0.135",
       "dImpl": 192,
       "mImpl": 6.4,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -19211,6 +19273,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19281,8 +19344,8 @@
       "linkHola": "https://10.242.0.94",
       "dImpl": 71,
       "mImpl": 2.4,
-      "dUso": 177,
-      "mUso": 5.9,
+      "dUso": 182,
+      "mUso": 6.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -19322,6 +19385,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -19394,8 +19458,8 @@
       "linkHola": "",
       "dImpl": 45,
       "mImpl": 1.5,
-      "dUso": 225,
-      "mUso": 7.5,
+      "dUso": 230,
+      "mUso": 7.7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -19435,6 +19499,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19505,8 +19570,8 @@
       "linkHola": "",
       "dImpl": 39,
       "mImpl": 1.3,
-      "dUso": 241,
-      "mUso": 8,
+      "dUso": 246,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -19546,6 +19611,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19653,6 +19719,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19770,6 +19837,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19840,8 +19908,8 @@
       "linkHola": "https://10.243.0.131",
       "dImpl": 207,
       "mImpl": 6.9,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -19881,6 +19949,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -19951,8 +20020,8 @@
       "linkHola": "https://10.243.0.93",
       "dImpl": 220,
       "mImpl": 7.3,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -19992,6 +20061,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -20064,8 +20134,8 @@
       "linkHola": "https://10.243.0.87",
       "dImpl": 212,
       "mImpl": 7.1,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -20105,6 +20175,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -20216,6 +20287,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -20327,6 +20399,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -20397,8 +20470,8 @@
       "linkHola": "",
       "dImpl": 56,
       "mImpl": 1.9,
-      "dUso": 241,
-      "mUso": 8,
+      "dUso": 246,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -20438,6 +20511,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -20504,8 +20578,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 323,
-      "mUso": 10.8,
+      "dUso": 328,
+      "mUso": 10.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -20545,6 +20619,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -20615,8 +20690,8 @@
       "linkHola": "https://10.243.0.85",
       "dImpl": 220,
       "mImpl": 7.3,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -20656,6 +20731,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -20768,6 +20844,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -20838,8 +20915,8 @@
       "linkHola": "",
       "dImpl": 2,
       "mImpl": 0.1,
-      "dUso": 325,
-      "mUso": 10.8,
+      "dUso": 330,
+      "mUso": 11,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -20879,6 +20956,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -20945,8 +21023,8 @@
       "linkHola": "",
       "dImpl": 63,
       "mImpl": 2.1,
-      "dUso": 241,
-      "mUso": 8,
+      "dUso": 246,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -20986,6 +21064,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21052,8 +21131,8 @@
       "linkHola": "https://10.243.0.132",
       "dImpl": 229,
       "mImpl": 7.6,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -21093,6 +21172,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21163,8 +21243,8 @@
       "linkHola": "",
       "dImpl": 9,
       "mImpl": 0.3,
-      "dUso": 318,
-      "mUso": 10.6,
+      "dUso": 323,
+      "mUso": 10.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -21204,6 +21284,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21270,8 +21351,8 @@
       "linkHola": "https://10.242.0.63",
       "dImpl": 38,
       "mImpl": 1.3,
-      "dUso": 274,
-      "mUso": 9.1,
+      "dUso": 279,
+      "mUso": 9.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -21311,6 +21392,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21422,6 +21504,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21492,8 +21575,8 @@
       "linkHola": "https://chnet.holasuite.com/",
       "dImpl": 120,
       "mImpl": 4,
-      "dUso": 165,
-      "mUso": 5.5,
+      "dUso": 170,
+      "mUso": 5.7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -21533,6 +21616,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21644,6 +21728,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21712,15 +21797,15 @@
       "dominioPrincipal": "aliat.holasuite.com",
       "dominio2": "",
       "linkHola": "https://10.243.0.15",
-      "dImpl": 234,
-      "mImpl": 7.8,
+      "dImpl": 237,
+      "mImpl": 7.9,
       "dUso": 0,
       "mUso": 0,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
       "dCapActual": 0,
-      "dActActual": 234,
+      "dActActual": 237,
       "dKickoffTotal": 0,
       "dVerTotal": 0,
       "dInstTotal": 0,
@@ -21740,7 +21825,7 @@
       "mensualidad": 0,
       "status": "⚙️ En Implementación",
       "alerta": "🚨 +20 días",
-      "dSinMov": 8,
+      "dSinMov": 13,
       "usoPlat": "NO",
       "dUsoTotal": 0,
       "mUsoTotal": 0,
@@ -21755,6 +21840,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21825,8 +21911,8 @@
       "linkHola": "https://10.243.0.127",
       "dImpl": 235,
       "mImpl": 7.8,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -21866,6 +21952,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -21977,6 +22064,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22014,7 +22102,7 @@
       "nombre": "Airnet",
       "url": "https://app.clickup.com/t/86b4znx0h",
       "estado": "concluído",
-      "etapaAnterior": "N/A",
+      "etapaAnterior": "Creado",
       "etapaActual": "Activo",
       "log": "✅",
       "fInicio": 1747085510875,
@@ -22047,8 +22135,8 @@
       "linkHola": "https://10.243.0.138",
       "dImpl": 231,
       "mImpl": 7.7,
-      "dUso": 2,
-      "mUso": 0.1,
+      "dUso": 7,
+      "mUso": 0.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -22088,6 +22176,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22158,8 +22247,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 340,
-      "mUso": 11.3,
+      "dUso": 345,
+      "mUso": 11.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -22199,6 +22288,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22265,8 +22355,8 @@
       "linkHola": "https://10.242.0.60",
       "dImpl": 115,
       "mImpl": 3.8,
-      "dUso": 178,
-      "mUso": 5.9,
+      "dUso": 183,
+      "mUso": 6.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -22306,6 +22396,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22376,8 +22467,8 @@
       "linkHola": "",
       "dImpl": 44,
       "mImpl": 1.5,
-      "dUso": 281,
-      "mUso": 9.4,
+      "dUso": 286,
+      "mUso": 9.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -22417,6 +22508,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -22530,6 +22622,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22641,6 +22734,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22752,6 +22846,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22863,6 +22958,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -22974,6 +23070,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23085,6 +23182,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23196,6 +23294,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23266,8 +23365,8 @@
       "linkHola": "",
       "dImpl": 22,
       "mImpl": 0.7,
-      "dUso": 319,
-      "mUso": 10.6,
+      "dUso": 324,
+      "mUso": 10.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -23307,6 +23406,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23418,6 +23518,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23529,6 +23630,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23599,8 +23701,8 @@
       "linkHola": "https://uplink.holasuite.com",
       "dImpl": 33,
       "mImpl": 1.1,
-      "dUso": 310,
-      "mUso": 10.3,
+      "dUso": 315,
+      "mUso": 10.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -23640,6 +23742,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23710,8 +23813,8 @@
       "linkHola": "",
       "dImpl": 2,
       "mImpl": 0.1,
-      "dUso": 354,
-      "mUso": 11.8,
+      "dUso": 359,
+      "mUso": 12,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -23751,6 +23854,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23862,6 +23966,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -23932,8 +24037,8 @@
       "linkHola": "",
       "dImpl": 24,
       "mImpl": 0.8,
-      "dUso": 325,
-      "mUso": 10.8,
+      "dUso": 330,
+      "mUso": 11,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -23973,6 +24078,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24043,8 +24149,8 @@
       "linkHola": "https://opennoa.holasuite.com",
       "dImpl": 36,
       "mImpl": 1.2,
-      "dUso": 309,
-      "mUso": 10.3,
+      "dUso": 314,
+      "mUso": 10.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -24084,6 +24190,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -24156,8 +24263,8 @@
       "linkHola": "https://tecnap.holasuite.com",
       "dImpl": 13,
       "mImpl": 0.4,
-      "dUso": 346,
-      "mUso": 11.5,
+      "dUso": 351,
+      "mUso": 11.7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -24197,6 +24304,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24308,6 +24416,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24380,8 +24489,8 @@
       "linkHola": "",
       "dImpl": 2,
       "mImpl": 0.1,
-      "dUso": 371,
-      "mUso": 12.4,
+      "dUso": 376,
+      "mUso": 12.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -24421,6 +24530,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24487,8 +24597,8 @@
       "linkHola": "",
       "dImpl": 42,
       "mImpl": 1.4,
-      "dUso": 310,
-      "mUso": 10.3,
+      "dUso": 315,
+      "mUso": 10.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -24528,6 +24638,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24639,6 +24750,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24705,8 +24817,8 @@
       "linkHola": "",
       "dImpl": 1,
       "mImpl": 0,
-      "dUso": 375,
-      "mUso": 12.5,
+      "dUso": 380,
+      "mUso": 12.7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -24740,12 +24852,13 @@
       "cantUsuariosExtra": 0,
       "prodContratado": "Wispro + Hola! Suite",
       "canales": {
-        "wa": "NO",
+        "wa": "SÍ",
         "ig": "NO",
         "wc": "NO",
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24857,6 +24970,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -24968,6 +25082,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25038,8 +25153,8 @@
       "linkHola": "https://directibusas.holasuite.com/",
       "dImpl": 27,
       "mImpl": 0.9,
-      "dUso": 338,
-      "mUso": 11.3,
+      "dUso": 343,
+      "mUso": 11.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -25079,6 +25194,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25190,6 +25306,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25301,6 +25418,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25412,6 +25530,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25523,6 +25642,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25593,8 +25713,8 @@
       "linkHola": "",
       "dImpl": 45,
       "mImpl": 1.5,
-      "dUso": 312,
-      "mUso": 10.4,
+      "dUso": 317,
+      "mUso": 10.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -25634,6 +25754,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25704,8 +25825,8 @@
       "linkHola": "https://speednet.holasuite.com/",
       "dImpl": 51,
       "mImpl": 1.7,
-      "dUso": 305,
-      "mUso": 10.2,
+      "dUso": 310,
+      "mUso": 10.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -25745,6 +25866,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25856,6 +25978,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -25926,8 +26049,8 @@
       "linkHola": "",
       "dImpl": 257,
       "mImpl": 8.6,
-      "dUso": 15,
-      "mUso": 0.5,
+      "dUso": 20,
+      "mUso": 0.7,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -25967,6 +26090,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26037,8 +26161,8 @@
       "linkHola": "",
       "dImpl": 80,
       "mImpl": 2.7,
-      "dUso": 267,
-      "mUso": 8.9,
+      "dUso": 272,
+      "mUso": 9.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -26078,6 +26202,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -26195,6 +26320,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26265,8 +26391,8 @@
       "linkHola": "",
       "dImpl": 39,
       "mImpl": 1.3,
-      "dUso": 322,
-      "mUso": 10.7,
+      "dUso": 327,
+      "mUso": 10.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -26306,6 +26432,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26417,6 +26544,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26528,6 +26656,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26598,8 +26727,8 @@
       "linkHola": "https://10.245.1.196",
       "dImpl": 101,
       "mImpl": 3.4,
-      "dUso": 241,
-      "mUso": 8,
+      "dUso": 246,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -26639,6 +26768,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26750,6 +26880,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26820,8 +26951,8 @@
       "linkHola": "https://10.245.1.209",
       "dImpl": 27,
       "mImpl": 0.9,
-      "dUso": 352,
-      "mUso": 11.7,
+      "dUso": 357,
+      "mUso": 11.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -26861,6 +26992,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -26972,6 +27104,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27083,6 +27216,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27153,8 +27287,8 @@
       "linkHola": "https://ingecom.holasuite.com",
       "dImpl": 23,
       "mImpl": 0.8,
-      "dUso": 359,
-      "mUso": 12,
+      "dUso": 364,
+      "mUso": 12.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -27194,6 +27328,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27264,8 +27399,8 @@
       "linkHola": "https://10.243.0.9",
       "dImpl": 271,
       "mImpl": 9,
-      "dUso": 1,
-      "mUso": 0,
+      "dUso": 6,
+      "mUso": 0.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -27305,6 +27440,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27416,6 +27552,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27527,6 +27664,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27638,6 +27776,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27708,8 +27847,8 @@
       "linkHola": "https://winssoluciones.holasuite.com",
       "dImpl": 160,
       "mImpl": 5.3,
-      "dUso": 163,
-      "mUso": 5.4,
+      "dUso": 168,
+      "mUso": 5.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -27749,6 +27888,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27819,8 +27959,8 @@
       "linkHola": "",
       "dImpl": 21,
       "mImpl": 0.7,
-      "dUso": 365,
-      "mUso": 12.2,
+      "dUso": 370,
+      "mUso": 12.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -27860,6 +28000,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -27930,8 +28071,8 @@
       "linkHola": "https://10.245.1.135",
       "dImpl": 13,
       "mImpl": 0.4,
-      "dUso": 379,
-      "mUso": 12.6,
+      "dUso": 384,
+      "mUso": 12.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -27971,6 +28112,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28082,6 +28224,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28152,8 +28295,8 @@
       "linkHola": "",
       "dImpl": 79,
       "mImpl": 2.6,
-      "dUso": 282,
-      "mUso": 9.4,
+      "dUso": 287,
+      "mUso": 9.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -28193,6 +28336,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28263,8 +28407,8 @@
       "linkHola": "https://conectate.holasuite.com",
       "dImpl": 18,
       "mImpl": 0.6,
-      "dUso": 372,
-      "mUso": 12.4,
+      "dUso": 377,
+      "mUso": 12.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -28304,6 +28448,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28374,8 +28519,8 @@
       "linkHola": "https://10.245.1.194",
       "dImpl": 48,
       "mImpl": 1.6,
-      "dUso": 329,
-      "mUso": 11,
+      "dUso": 334,
+      "mUso": 11.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -28415,6 +28560,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28485,8 +28631,8 @@
       "linkHola": "",
       "dImpl": 172,
       "mImpl": 5.7,
-      "dUso": 151,
-      "mUso": 5,
+      "dUso": 156,
+      "mUso": 5.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -28526,6 +28672,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28633,6 +28780,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28703,8 +28851,8 @@
       "linkHola": "https://10.245.1.199",
       "dImpl": 112,
       "mImpl": 3.7,
-      "dUso": 241,
-      "mUso": 8,
+      "dUso": 246,
+      "mUso": 8.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -28744,6 +28892,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28814,8 +28963,8 @@
       "linkHola": "https://10.242.0.105",
       "dImpl": 186,
       "mImpl": 6.2,
-      "dUso": 143,
-      "mUso": 4.8,
+      "dUso": 148,
+      "mUso": 4.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -28855,6 +29004,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -28925,8 +29075,8 @@
       "linkHola": "https://10.243.0.133",
       "dImpl": 284,
       "mImpl": 9.5,
-      "dUso": 4,
-      "mUso": 0.1,
+      "dUso": 9,
+      "mUso": 0.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -28966,6 +29116,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -29036,8 +29187,8 @@
       "linkHola": "https://intermax.holasuite.com/",
       "dImpl": 101,
       "mImpl": 3.4,
-      "dUso": 274,
-      "mUso": 9.1,
+      "dUso": 279,
+      "mUso": 9.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29077,6 +29228,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -29149,8 +29301,8 @@
       "linkHola": "https://10.245.1.185",
       "dImpl": 146,
       "mImpl": 4.9,
-      "dUso": 218,
-      "mUso": 7.3,
+      "dUso": 223,
+      "mUso": 7.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29190,6 +29342,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -29260,8 +29413,8 @@
       "linkHola": "https://10.245.1.195",
       "dImpl": 181,
       "mImpl": 6,
-      "dUso": 162,
-      "mUso": 5.4,
+      "dUso": 167,
+      "mUso": 5.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29301,6 +29454,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -29371,8 +29525,8 @@
       "linkHola": "https://onsys.holasuite.com",
       "dImpl": 29,
       "mImpl": 1,
-      "dUso": 378,
-      "mUso": 12.6,
+      "dUso": 383,
+      "mUso": 12.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29412,6 +29566,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -29482,8 +29637,8 @@
       "linkHola": "",
       "dImpl": 30,
       "mImpl": 1,
-      "dUso": 382,
-      "mUso": 12.7,
+      "dUso": 387,
+      "mUso": 12.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29523,6 +29678,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -29593,8 +29749,8 @@
       "linkHola": "https://10.245.1.134",
       "dImpl": 40,
       "mImpl": 1.3,
-      "dUso": 380,
-      "mUso": 12.7,
+      "dUso": 385,
+      "mUso": 12.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29634,6 +29790,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -29745,6 +29902,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -29819,8 +29977,8 @@
       "linkHola": "https://10.245.1.179",
       "dImpl": 51,
       "mImpl": 1.7,
-      "dUso": 367,
-      "mUso": 12.2,
+      "dUso": 372,
+      "mUso": 12.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29860,6 +30018,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -29932,8 +30091,8 @@
       "linkHola": "https://10.245.0.190",
       "dImpl": 41,
       "mImpl": 1.4,
-      "dUso": 381,
-      "mUso": 12.7,
+      "dUso": 386,
+      "mUso": 12.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -29973,6 +30132,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30043,8 +30203,8 @@
       "linkHola": "https://10.245.1.150",
       "dImpl": 234,
       "mImpl": 7.8,
-      "dUso": 101,
-      "mUso": 3.4,
+      "dUso": 106,
+      "mUso": 3.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -30084,6 +30244,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30154,8 +30315,8 @@
       "linkHola": "",
       "dImpl": 45,
       "mImpl": 1.5,
-      "dUso": 379,
-      "mUso": 12.6,
+      "dUso": 384,
+      "mUso": 12.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -30195,6 +30356,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30261,8 +30423,8 @@
       "linkHola": "https://10.245.0.84",
       "dImpl": 53,
       "mImpl": 1.8,
-      "dUso": 365,
-      "mUso": 12.2,
+      "dUso": 370,
+      "mUso": 12.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -30302,6 +30464,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30372,8 +30535,8 @@
       "linkHola": "https://10.245.1.33",
       "dImpl": 51,
       "mImpl": 1.7,
-      "dUso": 373,
-      "mUso": 12.4,
+      "dUso": 378,
+      "mUso": 12.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -30413,6 +30576,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30483,8 +30647,8 @@
       "linkHola": "https://10.245.1.168",
       "dImpl": 153,
       "mImpl": 5.1,
-      "dUso": 232,
-      "mUso": 7.7,
+      "dUso": 237,
+      "mUso": 7.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -30524,6 +30688,7 @@
         "pbx": "NO",
         "tg": "SÍ",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30602,8 +30767,8 @@
       "linkHola": "",
       "dImpl": 90,
       "mImpl": 3,
-      "dUso": 314,
-      "mUso": 10.5,
+      "dUso": 319,
+      "mUso": 10.6,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -30643,6 +30808,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30719,8 +30885,8 @@
       "linkHola": "https://10.245.1.169",
       "dImpl": 49,
       "mImpl": 1.6,
-      "dUso": 380,
-      "mUso": 12.7,
+      "dUso": 385,
+      "mUso": 12.8,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -30760,6 +30926,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "SÍ",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30875,6 +31042,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -30986,6 +31154,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31097,6 +31266,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31167,8 +31337,8 @@
       "linkHola": "https://10.243.0.104",
       "dImpl": 322,
       "mImpl": 10.7,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -31208,6 +31378,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31278,8 +31449,8 @@
       "linkHola": "https://10.245.1.87",
       "dImpl": 68,
       "mImpl": 2.3,
-      "dUso": 387,
-      "mUso": 12.9,
+      "dUso": 392,
+      "mUso": 13.1,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -31319,6 +31490,7 @@
         "pbx": "SÍ",
         "tg": "NO",
         "msg": "NO",
+        "ai": "SÍ",
         "tel": "SÍ"
       },
       "canalesBajados": {
@@ -31391,8 +31563,8 @@
       "linkHola": "https://10.245.0.116",
       "dImpl": 90,
       "mImpl": 3,
-      "dUso": 365,
-      "mUso": 12.2,
+      "dUso": 370,
+      "mUso": 12.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -31432,6 +31604,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31502,8 +31675,8 @@
       "linkHola": "https://10.245.1.158",
       "dImpl": 329,
       "mImpl": 11,
-      "dUso": 9,
-      "mUso": 0.3,
+      "dUso": 14,
+      "mUso": 0.5,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -31543,6 +31716,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31613,8 +31787,8 @@
       "linkHola": "https://10.245.1.153",
       "dImpl": 315,
       "mImpl": 10.5,
-      "dUso": 36,
-      "mUso": 1.2,
+      "dUso": 41,
+      "mUso": 1.4,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -31654,6 +31828,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31761,6 +31936,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31831,8 +32007,8 @@
       "linkHola": "http://zimainternet.holasuite.com/",
       "dImpl": 247,
       "mImpl": 8.2,
-      "dUso": 151,
-      "mUso": 5,
+      "dUso": 156,
+      "mUso": 5.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -31872,6 +32048,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -31942,8 +32119,8 @@
       "linkHola": "https://10.245.1.164",
       "dImpl": 119,
       "mImpl": 4,
-      "dUso": 356,
-      "mUso": 11.9,
+      "dUso": 361,
+      "mUso": 12,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -31983,6 +32160,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32053,8 +32231,8 @@
       "linkHola": "https://10.245.1.30",
       "dImpl": 276,
       "mImpl": 9.2,
-      "dUso": 151,
-      "mUso": 5,
+      "dUso": 156,
+      "mUso": 5.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -32094,6 +32272,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32160,8 +32339,8 @@
       "linkHola": "https://10.245.1.149",
       "dImpl": 111,
       "mImpl": 3.7,
-      "dUso": 381,
-      "mUso": 12.7,
+      "dUso": 386,
+      "mUso": 12.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -32201,6 +32380,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32267,8 +32447,8 @@
       "linkHola": "https://10.245.1.143",
       "dImpl": 132,
       "mImpl": 4.4,
-      "dUso": 352,
-      "mUso": 11.7,
+      "dUso": 357,
+      "mUso": 11.9,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -32308,6 +32488,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32374,8 +32555,8 @@
       "linkHola": "https://linagecomunicaciones.holasuite.com/",
       "dImpl": 280,
       "mImpl": 9.3,
-      "dUso": 151,
-      "mUso": 5,
+      "dUso": 156,
+      "mUso": 5.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -32415,6 +32596,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32481,8 +32663,8 @@
       "linkHola": "https://netlink.holasuite.com/",
       "dImpl": 152,
       "mImpl": 5.1,
-      "dUso": 332,
-      "mUso": 11.1,
+      "dUso": 337,
+      "mUso": 11.2,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -32522,6 +32704,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32633,6 +32816,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32703,8 +32887,8 @@
       "linkHola": "https://10.245.1.52",
       "dImpl": 356,
       "mImpl": 11.9,
-      "dUso": 35,
-      "mUso": 1.2,
+      "dUso": 40,
+      "mUso": 1.3,
       "dKickoffActual": 0,
       "dVerActual": 0,
       "dInstActual": 0,
@@ -32744,6 +32928,7 @@
         "pbx": "NO",
         "tg": "NO",
         "msg": "NO",
+        "ai": "NO",
         "tel": "NO"
       },
       "canalesBajados": {
@@ -32774,9 +32959,9 @@
     }
   ],
   "meta": {
-    "reason": "scheduler",
+    "reason": "startup",
     "ignored": 0,
-    "total": 296,
-    "tookMs": 11368
+    "total": 295,
+    "tookMs": 56746
   }
 }

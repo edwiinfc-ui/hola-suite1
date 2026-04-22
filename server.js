@@ -459,14 +459,34 @@ app.post('/api/integrations/:id/test', auth, async (req, res) => {
   const provider = String(integration.provider || '').toLowerCase();
 
   let testUrl = baseUrl;
-  if (provider === 'clickup') testUrl = 'https://api.clickup.com/api/v2/team';
-  if (provider === 'jira') testUrl = `${baseUrl}/rest/api/3/myself`;
+  let isApiEndpoint = false;
+  if (provider === 'clickup') {
+    testUrl = 'https://api.clickup.com/api/v2/team';
+    isApiEndpoint = true;
+  } else if (provider === 'jira') {
+    testUrl = `${baseUrl}/rest/api/3/myself`;
+    isApiEndpoint = true;
+  } else if (provider === 'custom' || provider === 'crm') {
+    // Para custom/CRM, intentar un GET básico al baseUrl
+    testUrl = baseUrl;
+    isApiEndpoint = false;
+  }
 
   try {
     const headers = buildIntegrationAuthHeaders(integration);
     const resp = await fetch(testUrl, { headers, timeout: 15000 });
     const text = await resp.text().catch(() => '');
-    if (!resp.ok) return res.status(resp.status).json({ ok: false, status: resp.status, body: text.slice(0, 400) });
+    if (!resp.ok) {
+      // Si es 400 y no es un endpoint API conocido, dar mensaje más útil
+      if (resp.status === 400 && !isApiEndpoint) {
+        return res.status(400).json({
+          ok: false,
+          status: resp.status,
+          error: 'El URL base parece ser de una interfaz web, no un endpoint API. Para integraciones custom, usa un endpoint API válido o configura como "Sin auth" si no requiere autenticación.'
+        });
+      }
+      return res.status(resp.status).json({ ok: false, status: resp.status, body: text.slice(0, 400) });
+    }
     return res.json({ ok: true, status: resp.status });
   } catch (e) {
     return res.status(502).json({ ok: false, error: e.message });

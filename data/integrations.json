@@ -1,2 +1,16 @@
-[]
-
+[
+  {
+    "id": "int-1776894723721",
+    "provider": "clickup",
+    "name": "Bajas",
+    "baseUrl": "https://app.clickup.com/9002104190/v/li/901407337259/90144091004?pr=90142399021",
+    "meta": {}
+  },
+  {
+    "id": "int-1776894929817",
+    "provider": "clickup",
+    "name": "Hola IA",
+    "baseUrl": "https://app.clickup.com/9002104190/v/li/901414623042/90143696819?pr=90142399021",
+    "meta": {}
+  }
+]

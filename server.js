@@ -108,6 +108,29 @@ app.use('/js', (_req, res, next) => {
 }, express.static(path.join(__dirname, 'js')));
 
 // ================================================================
+// HEALTH / READY (sin auth)
+// ================================================================
+app.get('/api/health', (_req, res) => {
+  res.json({
+    ok: true,
+    ts: new Date().toISOString(),
+    version: process.env.npm_package_version || null
+  });
+});
+
+app.get('/api/ready', (_req, res) => {
+  const cfg = readGlobalConfig();
+  res.json({
+    ok: true,
+    ts: new Date().toISOString(),
+    clickupConfigured: !!String(cfg.clickupApiKey || process.env.CLICKUP_API_KEY || '').trim()
+      && !!String(cfg.clickupListId || process.env.CLICKUP_LIST_ID || '').trim(),
+    holaConfigured: !!String(cfg.holaUrl || process.env.HOLA_API_URL || '').trim()
+      && !!String(cfg.holaToken || process.env.HOLA_API_TOKEN || '').trim()
+  });
+});
+
+// ================================================================
 // AUDIT LOG SYSTEM
 // ================================================================
 let auditSseClients = []; // SSE para auditoría (opcional)

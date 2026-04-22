@@ -10432,6 +10432,20 @@ function toast(type,msg,duration=4000){
   setTimeout(()=>{t.style.animation='toastOut .3s ease forwards';setTimeout(()=>t.remove(),300);},duration);
 }
 
+// Mostrar feedback cuando un botón dispara un error JS (evita la sensación de "no hace nada")
+window.addEventListener('error', (e) => {
+  try {
+    const msg = (e && (e.message || e.error?.message)) ? String(e.message || e.error?.message) : 'Error inesperado';
+    toast('error', msg);
+  } catch (_err) {}
+});
+window.addEventListener('unhandledrejection', (e) => {
+  try {
+    const msg = e?.reason?.message ? String(e.reason.message) : (e?.reason ? String(e.reason) : 'Error inesperado');
+    toast('error', msg);
+  } catch (_err) {}
+});
+
 // ================================================================
 // UI HELPERS
 // ================================================================

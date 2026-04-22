@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vy-Lex Dashboard - ClickUp Hub</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+        
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn:not(.active) {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card h3 {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+        
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-card.success .value {
+            color: #10b981;
+        }
+        
+        .stat-card.warning .value {
+            color: #f59e0b;
+        }
+        
+        .stat-card.danger .value {
+            color: #ef4444;
+        }
+        
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: none;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .section h2 {
+            margin-bottom: 20px;
+            color: #333;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        thead {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge.warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge.danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .badge.info {
+            background: #dbeafe;
+            color: #0c2340;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group input,
+        .filter-group select {
+            padding: 8px 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .alert-card {
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            background: #f0f4ff;
+            border-radius: 4px;
+        }
+        
+        .alert-card.danger {
+            border-left-color: #ef4444;
+            background: #fef2f2;
+        }
+        
+        .alert-card.warning {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .alert-card h4 {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .alert-card p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .alert-card .accion {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            display: inline-block;
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        .empty {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Vy-Lex Dashboard</h1>
+        <p>ClickUp Hub - Datos de Implementación, Ventas y CS</p>
+    </div>
+    
+    <div class="container">
+        <!-- NAVEGACIÓN -->
+        <div class="nav">
+            <button class="btn btn-primary active" onclick="mostrarSeccion('resumen')">📊 Resumen</button>
+            <button class="btn btn-primary" onclick="mostrarSeccion('clientes')">👥 Clientes</button>
+            <button class="btn btn-primary" onclick="mostrarSeccion('alertas')">🚨 Alertas</button>
+            <button class="btn btn-primary" onclick="mostrarSeccion('analytics')">📈 Análisis</button>
+            <button class="btn btn-primary" onclick="mostrarSeccion('auditoria')">📋 Auditoría</button>
+        </div>
+        
+        <!-- RESUMEN -->
+        <div id="resumen" class="section active">
+            <h2>Resumen General</h2>
+            <div class="stats" id="statsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando datos...
+                </div>
+            </div>
+        </div>
+        
+        <!-- CLIENTES -->
+        <div id="clientes" class="section">
+            <h2>Clientes</h2>
+            <div class="filter-group">
+                <input type="text" id="filterNombre" placeholder="Buscar por nombre...">
+                <select id="filterPais">
+                    <option value="">Todos los países</option>
+                </select>
+                <select id="filterEstado">
+                    <option value="">Todos los estados</option>
+                </select>
+                <button class="btn btn-primary" onclick="cargarClientes()">🔍 Buscar</button>
+            </div>
+            <div id="clientesContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando clientes...
+                </div>
+            </div>
+        </div>
+        
+        <!-- ALERTAS -->
+        <div id="alertas" class="section">
+            <h2>Alertas del Sistema</h2>
+            <div class="filter-group">
+                <select id="filterSeveridad">
+                    <option value="">Todas las severidades</option>
+                    <option value="CRÍTICA">🔴 CRÍTICA</option>
+                    <option value="ALTA">🟠 ALTA</option>
+                    <option value="MEDIA">🟡 MEDIA</option>
+                    <option value="BAJA">🔵 BAJA</option>
+                </select>
+                <button class="btn btn-primary" onclick="cargarAlertas()">🔄 Actualizar</button>
+            </div>
+            <div id="alertasContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando alertas...
+                </div>
+            </div>
+        </div>
+        
+        <!-- ANÁLISIS -->
+        <div id="analytics" class="section">
+            <h2>Análisis Avanzado</h2>
+            <div class="filter-group">
+                <select id="filterAnalytics" onchange="cargarAnalytics()">
+                    <option value="sector">Por Sector (País)</option>
+                    <option value="implementacion">Por Tipo Implementación</option>
+                    <option value="consultor">Por Consultor</option>
+                </select>
+            </div>
+            <div id="analyticsContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando análisis...
+                </div>
+            </div>
+        </div>
+        
+        <!-- AUDITORÍA -->
+        <div id="auditoria" class="section">
+            <h2>Registro de Cambios</h2>
+            <div class="filter-group">
+                <input type="date" id="filterDesde">
+                <input type="date" id="filterHasta">
+                <input type="text" id="filterUsuario" placeholder="Usuario...">
+                <button class="btn btn-primary" onclick="cargarAuditoria()">🔍 Filtrar</button>
+            </div>
+            <div id="auditoriaContainer">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Cargando auditoría...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let token = localStorage.getItem('token') || '';
+        
+        // Verificar autenticación
+        if (!token) {
+            token = prompt('Ingresa tu token de autenticación:');
+            if (token) localStorage.setItem('token', token);
+            else window.location.reload();
+        }
+        
+        const headers = {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        };
+        
+        function mostrarSeccion(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            if (id === 'resumen') cargarResumen();
+            else if (id === 'clientes') cargarClientes();
+            else if (id === 'alertas') cargarAlertas();
+            else if (id === 'analytics') cargarAnalytics();
+            else if (id === 'auditoria') cargarAuditoria();
+        }
+        
+        async function cargarResumen() {
+            try {
+                const resp = await fetch(`${API_BASE}/clickup/full-data`, { headers });
+                const data = await resp.json();
+                
+                if (!data.ok) throw new Error(data.error);
+                
+                const summary = data.data.summary;
+                const html = `
+                    <div class="stat-card success">
+                        <h3>Total de Clientes</h3>
+                        <div class="value">${summary.total}</div>
+                    </div>
+                    <div class="stat-card success">
+                        <h3>Activos</h3>
+                        <div class="value">${summary.activos}</div>
+                    </div>
+                    <div class="stat-card warning">
+                        <h3>En Proceso</h3>
+                        <div class="value">${summary.enProceso}</div>
+                    </div>
+                    <div class="stat-card danger">
+                        <h3>Cancelados</h3>
+                        <div class="value">${summary.cancelados}</div>
+                    </div>
+                    <div class="stat-card success">
+                        <h3>Tasa Éxito</h3>
+                        <div class="value">${summary.tasaExito}%</div>
+                    </div>
+                    <div class="stat-card info">
+                        <h3>Promedio Días</h3>
+                        <div class="value">${summary.promDiasImpl}</div>
+                    </div>
+                `;
+                
+                document.getElementById('statsContainer').innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('statsContainer').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+            }
+        }
+        
+        async function cargarClientes() {
+            try {
+                const nombre = document.getElementById('filterNombre')?.value || '';
+                const pais = document.getElementById('filterPais')?.value || '';
+                const estado = document.getElementById('filterEstado')?.value || '';
+                
+                const params = new URLSearchParams();
+                if (nombre) params.append('nombre', nombre);
+                if (pais) params.append('pais', pais);
+                if (estado) params.append('estado', estado);
+                
+                const resp = await fetch(`${API_BASE}/clientes?${params}`, { headers });
+                const data = await resp.json();
+                
+                if (!data.ok) throw new Error(data.error);
+                
+                if (data.clientes.length === 0) {
+                    document.getElementById('clientesContainer').innerHTML = '<div class="empty"><div class="empty-icon">😴</div>No hay clientes con esos filtros</div>';
+                    return;
+                }
+                
+                let html = '<table><thead><tr><th>Cliente</th><th>Estado</th><th>País</th><th>Responsables</th><th>Días</th><th>Acciones</th></tr></thead><tbody>';
+                
+                data.clientes.forEach(c => {
+                    const color = c.statusType === 'activo' ? 'success' : c.statusType === 'cancelado' ? 'danger' : 'warning';
+                    html += `
+                        <tr>
+                            <td><strong>${c.nombre}</strong></td>
+                            <td><span class="badge ${color}">${c.estado}</span></td>
+                            <td>${c.pais}</td>
+                            <td>
+                                <small>
+                                    ${c.responsables.kickoff || '-'} (KO)<br>
+                                    ${c.responsables.verificacion || '-'} (VER)<br>
+                                    ${c.responsables.capacitacion || '-'} (CAP)
+                                </small>
+                            </td>
+                            <td>${c.dias} días</td>
+                            <td><a href="${c.url}" target="_blank">Ver en ClickUp →</a></td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('clientesContainer').innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('clientesContainer').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+            }
+        }
+        
+        async function cargarAlertas() {
+            try {
+                const severidad = document.getElementById('filterSeveridad')?.value || '';
+                const params = severidad ? `?severidad=${severidad}` : '';
+                
+                const resp = await fetch(`${API_BASE}/alertas${params}`, { headers });
+                const data = await resp.json();
+                
+                if (!data.ok) throw new Error(data.error);
+                
+                if (data.alertas.length === 0) {
+                    document.getElementById('alertasContainer').innerHTML = '<div class="empty"><div class="empty-icon">✅</div>¡Sin alertas! Todo bien</div>';
+                    return;
+                }
+                
+                let html = `
+                    <p><strong>Total:</strong> ${data.total} | 
+                    <span class="badge danger">${data.criticas} CRÍTICA</span>
+                    <span class="badge warning">${data.altas} ALTA</span>
+                    <span class="badge info">${data.medias} MEDIA</span>
+                    </p>
+                `;
+                
+                data.alertas.forEach(a => {
+                    const clase = a.severidad === 'CRÍTICA' ? 'danger' : a.severidad === 'ALTA' ? 'warning' : 'info';
+                    html += `
+                        <div class="alert-card ${clase}">
+                            <h4>🚨 ${a.tipo}</h4>
+                            <p><strong>${a.cliente}</strong></p>
+                            <p>${a.mensaje}</p>
+                            <div class="accion">${a.accion}</div>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('alertasContainer').innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('alertasContainer').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+            }
+        }
+        
+        async function cargarAnalytics() {
+            try {
+                const tipo = document.getElementById('filterAnalytics')?.value || 'sector';
+                const resp = await fetch(`${API_BASE}/analytics?tipo=${tipo}`, { headers });
+                const data = await resp.json();
+                
+                if (!data.ok) throw new Error(data.error);
+                
+                let html = '<table><thead><tr>';
+                
+                if (tipo === 'sector') {
+                    html += '<th>Sector</th><th>Total</th><th>Completadas</th><th>En Curso</th><th>Canceladas</th><th>Promedio Días</th><th>Tasa Éxito</th></tr></thead><tbody>';
+                    data.datos.forEach(d => {
+                        html += `
+                            <tr>
+                                <td><strong>${d.sector}</strong></td>
+                                <td>${d.total}</td>
+                                <td><span class="badge success">${d.completadas}</span></td>
+                                <td><span class="badge warning">${d.enCurso}</span></td>
+                                <td><span class="badge danger">${d.canceladas}</span></td>
+                                <td>${d.promedioDias}</td>
+                                <td>${d.tasaExito}%</td>
+                            </tr>
+                        `;
+                    });
+                } else if (tipo === 'implementacion') {
+                    html += '<th>Tipo</th><th>Total</th><th>Completadas</th><th>En Curso</th><th>Canceladas</th><th>Promedio Días</th><th>Tasa Éxito</th></tr></thead><tbody>';
+                    data.datos.forEach(d => {
+                        html += `
+                            <tr>
+                                <td><strong>${d.tipo}</strong></td>
+                                <td>${d.total}</td>
+                                <td><span class="badge success">${d.completadas}</span></td>
+                                <td><span class="badge warning">${d.enCurso}</span></td>
+                                <td><span class="badge danger">${d.canceladas}</span></td>
+                                <td>${d.promedioDias}</td>
+                                <td>${d.tasaExito}%</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    html += '<th>Consultor</th><th>Etapas Asignadas</th><th>Clientes Únicos</th><th>Completadas</th><th>En Curso</th><th>Canceladas</th></tr></thead><tbody>';
+                    data.datos.forEach(d => {
+                        html += `
+                            <tr>
+                                <td><strong>${d.consultor}</strong></td>
+                                <td>${d.etapasAsignadas}</td>
+                                <td>${d.clientesÚnicos}</td>
+                                <td><span class="badge success">${d.completadas}</span></td>
+                                <td><span class="badge warning">${d.enCurso}</span></td>
+                                <td><span class="badge danger">${d.canceladas}</span></td>
+                            </tr>
+                        `;
+                    });
+                }
+                
+                html += '</tbody></table>';
+                document.getElementById('analyticsContainer').innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('analyticsContainer').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+            }
+        }
+        
+        async function cargarAuditoria() {
+            try {
+                const desde = document.getElementById('filterDesde')?.value || '';
+                const hasta = document.getElementById('filterHasta')?.value || '';
+                const usuario = document.getElementById('filterUsuario')?.value || '';
+                
+                const params = new URLSearchParams();
+                if (desde) params.append('desde', desde);
+                if (hasta) params.append('hasta', hasta);
+                if (usuario) params.append('usuario', usuario);
+                
+                const resp = await fetch(`${API_BASE}/auditoria?${params}`, { headers });
+                const data = await resp.json();
+                
+                if (!data.ok) throw new Error(data.error);
+                
+                if (data.logs.length === 0) {
+                    document.getElementById('auditoriaContainer').innerHTML = '<div class="empty">No hay registros</div>';
+                    return;
+                }
+                
+                let html = `<p><strong>Total de registros:</strong> ${data.total}</p>`;
+                html += '<table><thead><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Detalles</th></tr></thead><tbody>';
+                
+                data.logs.forEach(log => {
+                    const fecha = new Date(log.timestamp).toLocaleString('es-ES');
+                    html += `
+                        <tr>
+                            <td>${fecha}</td>
+                            <td>${log.user}</td>
+                            <td><strong>${log.action}</strong></td>
+                            <td><small>${JSON.stringify(log.details).substring(0, 100)}...</small></td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</tbody></table>';
+                document.getElementById('auditoriaContainer').innerHTML = html;
+            } catch (e) {
+                console.error(e);
+                document.getElementById('auditoriaContainer').innerHTML = `<div class="empty">Error: ${e.message}</div>`;
+            }
+        }
+        
+        // Cargar resumen al abrir
+        cargarResumen();
+    </script>
+</body>
+</html>

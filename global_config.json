@@ -1,6 +1,7 @@
 {
   "clickupApiKey": "pk_9905747_YA8JWPKAC2GPO5MRWL74KLTCU5918QQG",
   "clickupListId": "901406307381",
+  "googleSheetsApiKey": "AIzaSyDvqcdv_9ZFxZyzb6QRo0sd3EjlGHAb6hw",
   "holaUrl": "https://wispro.holasuite.com/api/v1",
   "holaToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY2ODJiMzg0Zjk0MmI3NDA2NzNiM2Y5YyIsImlhdCI6MTc1ODExOTQ4Nn0.sOEetT5ww8nMaI_1bd8s68hE7Nzke15A5uSveR9yZ_8",
   "holaWs": "",

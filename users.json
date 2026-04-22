@@ -2,28 +2,28 @@
   {
     "id": 1,
     "username": "admin@holasuite.com",
-    "password": "hola2025",
+    "password": "$2a$10$GWB7nR8111h/J8ZQj1PmYOOfjS7Tsxz.MmmCYHf9/VN53X4BeomJq",
     "role": "admin",
     "name": "Administrador"
   },
   {
     "id": 3,
     "username": "alejandro",
-    "password": "alejandro123",
+    "password": "$2a$10$gH1eipt060h85oJvlMTPyOe3X8PPXlFMYxAhYpuK1ZPwDNEPqJXnO",
     "role": "consultant",
     "name": "Alejandro Zambrano"
   },
   {
     "id": 4,
     "username": "mariane",
-    "password": "mariane123",
+    "password": "$2a$10$0XjokXvHRJdHiXa9HX5oT.ICD8qzybEPTfUJaVEFEQ5sWhDjIkzwq",
     "role": "consultant",
     "name": "Mariane Teló"
   },
   {
     "id": 1774642292987,
     "username": "edwin@holasuite.com",
-    "password": "Lore2175.",
+    "password": "$2a$10$IFxD3m5l9GeArGmot.eRcurQZAKRkZtRiRFXywiXMA.FLE00kitrO",
     "role": "admin",
     "name": "Edwin Franco"
   }

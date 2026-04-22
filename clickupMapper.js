@@ -809,49 +809,70 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
 
   // --- CANALES ---
   const extractCanales = (fieldNames) => {
-    const f3 = findCustomField(cf, fieldNames);
+    // Buscar todos los campos que coincidan con los nombres candidatos
+    const matchingFields = (cf || []).filter(f => {
+      const fName = normalizeText(f?.name);
+      return fieldNames.some(name => fName.includes(normalizeText(name)));
+    });
+
     let array = [];
-    if (f3?.value) {
-      if (Array.isArray(f3.value)) {
-        const opciones = f3.type_config?.options || [];
-        f3.value.forEach(item => {
-          let label = '';
-          if (typeof item === 'string') {
-            const opcion = opciones.find(opt => opt.id === item || opt.name === item);
-            label = opcion ? (opcion.label || opcion.name || '') : item;
-          } else if (typeof item === 'object' && item !== null) {
-            label = item.label || item.name || item.value || '';
-            if (!label && item.id && opciones.length) {
-              const o = opciones.find(opt => opt.id === item.id);
-              if (o) label = o.label || o.name || '';
+    matchingFields.forEach(f3 => {
+      if (f3?.value) {
+        if (Array.isArray(f3.value)) {
+          const opciones = f3.type_config?.options || [];
+          f3.value.forEach(item => {
+            let label = '';
+            if (typeof item === 'string') {
+              const opcion = opciones.find(opt => opt.id === item || opt.name === item || opt.label === item);
+              label = opcion ? (opcion.label || opcion.name || '') : item;
+            } else if (typeof item === 'object' && item !== null) {
+              label = item.label || item.name || item.value || '';
+              if (!label && item.id && opciones.length) {
+                const o = opciones.find(opt => opt.id === item.id);
+                if (o) label = o.label || o.name || '';
+              }
+            } else if (typeof item === 'number') {
+              const opcion = opciones.find(opt => opt.orderindex === item);
+              if (opcion) label = opcion.name || opcion.label || '';
             }
-          } else if (typeof item === 'number') {
-            const opcion = opciones.find(opt => opt.orderindex === item);
-            if (opcion) label = opcion.name || opcion.label || '';
-          }
-          if (label && label.trim() !== '') array.push(label.toLowerCase().trim());
-        });
-      } else if (typeof f3.value === 'string') {
-        array = f3.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+            if (label && label.trim() !== '') array.push(label.toLowerCase().trim());
+          });
+        } else if (typeof f3.value === 'string') {
+          const split = f3.value.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+          array.push(...split);
+        } else if (f3.type_config?.options && (f3.value !== null && f3.value !== undefined)) {
+          // Caso Dropdown simple (valor único)
+          const valStr = String(f3.value);
+          const valInt = parseInt(valStr, 10);
+          const o = f3.type_config.options.find(x => 
+            x.id === valStr || (!Number.isNaN(valInt) && x.orderindex === valInt)
+          );
+          if (o) array.push((o.name || o.label || '').toLowerCase().trim());
+        }
       }
-    }
-    return array;
+    });
+    return [...new Set(array)];
   };
 
-  const cCandidates = ['canales contratados', 'canais contratados', 'canales', 'canais', 'productos contratados', 'produtos contratados'];
+  const cCandidates = ['canales contratados', 'canais contratados', 'canales', 'canais'];
   const bCandidates = ['canales bajados', 'canais baixados', 'canales desactivados'];
   
   const canalesArray = extractCanales(cCandidates);
   const canalesBajadosArray = extractCanales(bCandidates);
 
-  const checkChannel = (arr, keys) => arr.some(c => keys.some(k => c.includes(k)));
+  const checkChannel = (arr, keys) => arr.some(c => keys.some(k => normalizeText(c).includes(normalizeText(k))));
 
-  const wa = checkChannel(canalesArray, ['whatsapp', 'wpp', 'waba']) ? 'SÍ' : 'NO';
+  let wa = checkChannel(canalesArray, ['whatsapp', 'wpp', 'waba', 'wa ']) ? 'SÍ' : 'NO';
   const ig = checkChannel(canalesArray, ['instagram', 'ig ']) ? 'SÍ' : 'NO';
   const wc = checkChannel(canalesArray, ['webchat', 'wc ']) ? 'SÍ' : 'NO';
-  const pbx = checkChannel(canalesArray, ['pbx', 'telefonia', 'telefonía', 'telephony']) ? 'SÍ' : 'NO';
+  const pbx = checkChannel(canalesArray, ['pbx', 'telefonia', 'telefonía', 'telephony', 'telefon ']) ? 'SÍ' : 'NO';
   const tg = checkChannel(canalesArray, ['telegram', 'tg ']) ? 'SÍ' : 'NO';
   const msg = checkChannel(canalesArray, ['messenger', 'facebook', 'fb ']) ? 'SÍ' : 'NO';
+  const ai = checkChannel(canalesArray, ['hola ia', 'ia ', 'ai ']) ? 'SÍ' : 'NO';
+
+  // Verificación extra para WhatsApp API Oficial
+  const waOficial = getCampo(cf, 'WhatsApp API Oficial', 'dropdown');
+  if (waOficial === 'Si' || waOficial === 'SÍ' || waOficial === 'si') wa = 'SÍ';
 
   const waBajado = canalesBajadosArray.some(c => c.includes('whatsapp')) ? 'SÍ' : 'NO';
   const igBajado = canalesBajadosArray.some(c => c.includes('instagram')) ? 'SÍ' : 'NO';
@@ -952,7 +973,7 @@ async function procesarTareaActualizadaNode(t, allTasks, cfg, ctx) {
     tipoBaja,
     cantUsuariosExtra,
     prodContratado,
-    canales: { wa, ig, wc, pbx, tg, msg, tel: pbx },
+    canales: { wa, ig, wc, pbx, tg, msg, ai, tel: pbx },
     canalesBajados: { wa: waBajado, ig: igBajado, pbx: pbxBajado, raw: canalesBajadosArray },
     canalesArray,
     upgImpl, upgPost, upgradeOrigID,

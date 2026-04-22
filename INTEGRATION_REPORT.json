@@ -1,0 +1,32 @@
+{
+  "timestamp": "2026-04-14T12:39:11.774Z",
+  "integrations": {
+    "clickup": {
+      "status": "OK",
+      "taskCount": 100,
+      "listName": "Implementación Hola! Suite",
+      "details": "API funciona correctamente, 100 tareas disponibles"
+    },
+    "googleSheets": {
+      "status": "SKIPPED",
+      "reason": "Not configured"
+    },
+    "holasuite": {
+      "status": "SKIPPED",
+      "reason": "Not configured"
+    },
+    "localStorage": {
+      "status": "OK",
+      "details": "Archivos locales disponibles"
+    },
+    "cache": {
+      "status": "OK",
+      "details": "SmartCache funciona correctamente"
+    }
+  },
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "warnings": 2
+  }
+}

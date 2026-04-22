@@ -1,23 +1,170 @@
 {
   "default": {
     "widgets": [
-      { "id": "kpi-total", "type": "kpi", "enabled": true, "order": 1 },
-      { "id": "kpi-activos", "type": "kpi", "enabled": true, "order": 2 },
-      { "id": "kpi-impl", "type": "kpi", "enabled": true, "order": 3 },
-      { "id": "kpi-cancel", "type": "kpi", "enabled": true, "order": 4 },
-      { "id": "kpi-prom", "type": "kpi", "enabled": true, "order": 5 },
-      { "id": "kpi-alertas", "type": "kpi", "enabled": true, "order": 6 },
-      { "id": "kpi-upsell", "type": "kpi", "enabled": true, "order": 7 },
-      { "id": "kpi-sinlink", "type": "kpi", "enabled": true, "order": 8 },
-
-      { "id": "chartEstados", "type": "chart", "enabled": true, "order": 10 },
-      { "id": "chartPaises", "type": "chart", "enabled": true, "order": 11 },
-      { "id": "chartCanales", "type": "chart", "enabled": true, "order": 12 },
-      { "id": "chartConsultores", "type": "chart", "enabled": true, "order": 13 },
-      { "id": "chartMes", "type": "chart", "enabled": true, "order": 14 }
+      {
+        "id": "kpi-total",
+        "type": "kpi",
+        "enabled": true,
+        "order": 1
+      },
+      {
+        "id": "kpi-activos",
+        "type": "kpi",
+        "enabled": true,
+        "order": 2
+      },
+      {
+        "id": "kpi-impl",
+        "type": "kpi",
+        "enabled": true,
+        "order": 3
+      },
+      {
+        "id": "kpi-cancel",
+        "type": "kpi",
+        "enabled": true,
+        "order": 4
+      },
+      {
+        "id": "kpi-prom",
+        "type": "kpi",
+        "enabled": true,
+        "order": 5
+      },
+      {
+        "id": "kpi-alertas",
+        "type": "kpi",
+        "enabled": true,
+        "order": 6
+      },
+      {
+        "id": "kpi-upsell",
+        "type": "kpi",
+        "enabled": true,
+        "order": 7
+      },
+      {
+        "id": "kpi-sinlink",
+        "type": "kpi",
+        "enabled": true,
+        "order": 8
+      },
+      {
+        "id": "chartEstados",
+        "type": "chart",
+        "enabled": true,
+        "order": 10
+      },
+      {
+        "id": "chartPaises",
+        "type": "chart",
+        "enabled": true,
+        "order": 11
+      },
+      {
+        "id": "chartCanales",
+        "type": "chart",
+        "enabled": true,
+        "order": 12
+      },
+      {
+        "id": "chartConsultores",
+        "type": "chart",
+        "enabled": true,
+        "order": 13
+      },
+      {
+        "id": "chartMes",
+        "type": "chart",
+        "enabled": true,
+        "order": 14
+      }
     ]
   },
-  "byUser": {},
+  "byUser": {
+    "1774642292987": {
+      "widgets": [
+        {
+          "id": "kpi-total",
+          "type": "kpi",
+          "enabled": true,
+          "order": 1
+        },
+        {
+          "id": "chartMes",
+          "type": "chart",
+          "enabled": true,
+          "order": 2
+        },
+        {
+          "id": "kpi-activos",
+          "type": "kpi",
+          "enabled": true,
+          "order": 3
+        },
+        {
+          "id": "kpi-impl",
+          "type": "kpi",
+          "enabled": true,
+          "order": 4
+        },
+        {
+          "id": "kpi-cancel",
+          "type": "kpi",
+          "enabled": true,
+          "order": 5
+        },
+        {
+          "id": "kpi-prom",
+          "type": "kpi",
+          "enabled": true,
+          "order": 6
+        },
+        {
+          "id": "kpi-alertas",
+          "type": "kpi",
+          "enabled": true,
+          "order": 7
+        },
+        {
+          "id": "kpi-upsell",
+          "type": "kpi",
+          "enabled": true,
+          "order": 8
+        },
+        {
+          "id": "kpi-sinlink",
+          "type": "kpi",
+          "enabled": false,
+          "order": 9
+        },
+        {
+          "id": "chartEstados",
+          "type": "chart",
+          "enabled": true,
+          "order": 10
+        },
+        {
+          "id": "chartPaises",
+          "type": "chart",
+          "enabled": true,
+          "order": 11
+        },
+        {
+          "id": "chartCanales",
+          "type": "chart",
+          "enabled": true,
+          "order": 12
+        },
+        {
+          "id": "chartConsultores",
+          "type": "chart",
+          "enabled": true,
+          "order": 13
+        }
+      ]
+    }
+  },
   "byRole": {
     "admin": {
       "widgets": []
@@ -27,4 +174,3 @@
     }
   }
 }
-

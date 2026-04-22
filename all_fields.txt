@@ -1,0 +1,209 @@
+
+FIELD: Progress (ID: 03d217e1-d2ac-4e12-bb90-23b881e8810f, Type: automatic_progress)
+
+FIELD: Canales contratados (ID: 042ce11a-8ff9-4bca-a6c4-5d06d045373c, Type: labels)
+Options:
+ - [fd1afc42-895f-4b18-9bd2-eee1c78bd270] ¡Hola! IA
+ - [cc08d3ce-e740-4488-a2bf-a5259df6963a] WhatsApp
+ - [e8e83298-eb8c-47fc-a3e7-580c31617aaf] Telegram
+ - [b4a5d9e4-01fc-4ae0-9f0f-f0960b77cae6] Messenger
+ - [af4951fe-94a0-4e06-83cb-38dbc873f42b] Instagram
+ - [fc95d228-ceb8-4bca-8958-31f23f501191] Webchat
+ - [eea5040c-b701-467e-bcb0-07f47d27cfbc] Telefonia
+ - [e236900a-1481-48cc-95f8-79e2bb2be771] upgrade
+
+FIELD: E-mail (ID: 049004a9-ff71-4463-b3ce-fd8d2b58606d, Type: email)
+
+FIELD: País (ID: 0db874a3-5801-407f-8026-1c3af67dc4e3, Type: drop_down)
+Options:
+ - [1af8c702-a6f6-4de5-8127-b624e308fa20] Argentina
+ - [d2ec5a6f-fc7c-443d-9fd3-294f46fda852] Chile
+ - [aec90a37-12af-4f99-9abd-c1eafb455237] Colômbia
+ - [01e0f1db-8c5a-42e6-b3b8-9840e180bd68] Uruguai
+ - [f09b1b68-dafc-4a18-914b-49dcd9f80611] Venezuela
+ - [01b4d625-4721-45ed-974d-da6e862f4e07] Ecuador
+ - [b83fd568-b1df-4182-ba30-33821a8f36db] Panamá
+ - [edac6698-b247-433e-a3fd-38cb740a02c3] Costa Rica
+ - [3918eaf8-76af-4791-a428-37e118d2497a] Peru
+ - [03bf4aec-c517-4c9a-9e32-21223802327f] Republica Dominicana
+ - [584bd9ce-dba1-43f7-a4b0-a9c14b130b24] Honduras
+ - [8b94838c-b2a4-4222-a0ed-b4c99319ffb7] Mexico
+ - [f064cc5f-11f3-459f-b5de-9518942f6ac3] Colombia
+ - [9a117719-0356-40b9-8b87-b6b4726d3c35] Guatemala
+ - [cfd29de0-b338-455c-903c-d6bccc608a4d] Bolivia
+ - [f0577442-9fd3-41ad-978f-ae50a161d85b] Cuba
+ - [78ff571b-9459-434a-83e7-dc574c13dcf3] El Salvador
+ - [8c6f55e3-2a43-46dd-a153-10bd05a35a9f] Nicarágua
+ - [66b43715-6f37-410d-a1bc-8419bfacfc92] Paraguay
+ - [b3a40f72-7e5e-4c7f-99b9-0f0ab702a831] Puerto_Rico
+ - [fd3a2e31-62e4-4b9c-b297-d22f10d79072] Angola
+
+FIELD: Cantidad de horas (ID: 1b7f08f4-51df-43fa-bf15-32a4ff4b6f28, Type: number)
+
+FIELD: Plan  (ID: 24777517-3feb-493c-87b6-716d504c49b9, Type: drop_down)
+Options:
+ - [5734e8f3-0bc5-4c1a-8a39-10175ea38821] Plan basic
+ - [0e3b8db1-8e61-4713-b8cb-02bc358b6eb9] Plan personalizable
+
+FIELD: Responsable por Capacitación (ID: 25f5a125-50cb-45b2-aaf7-82af69340a84, Type: users)
+
+FIELD: IP (ID: 2c9cc77f-3ed2-4656-af21-86d83d5af5bc, Type: short_text)
+
+FIELD: Tipo de baja (ID: 3c8ff3e6-6cf6-497f-b86f-1ab9f76a7466, Type: labels)
+Options:
+ - [d1a6ac27-1e0f-485a-893c-d873c1f92173] Producto
+ - [6c9fee7b-b4dc-4218-9a24-c2df28759799] Contrato
+
+FIELD: ID Wispro (ID: 3fee7b78-b66a-4e9a-8f28-52b06bae96d0, Type: short_text)
+
+FIELD: Cantidad de Usuarios extras (ID: 4226d1a3-3056-4530-8bf2-ea33f1fe4762, Type: number)
+
+FIELD: Cantidad de Capacitaciones  R2 (ID: 4435337a-83da-4da1-88fa-8eec0d3f7bd3, Type: number)
+
+FIELD: Responsable por la activación (ID: 565da23b-9415-4a54-8e78-4b3e80765ded, Type: users)
+
+FIELD: Clave (ID: 57c80d59-edf1-48ac-be09-aaa019e0aabc, Type: short_text)
+
+FIELD: Domínio (ID: 5e70b2de-3ae8-42ae-833d-ba5af35fd9b3, Type: short_text)
+
+FIELD: Plan cloud (ID: 600cfb88-f527-46ed-a6a0-ba049b0efc6f, Type: drop_down)
+Options:
+ - [84749668-ee7a-47fd-a7e0-9adf4a7c7f12] 2.000
+ - [61dded66-dbd9-4a23-b5c3-61adf0d7fbd6] 5.000
+ - [b7d8c8c8-5037-4d87-899c-626429dcbf0f] 10.000
+ - [fededb40-2afe-4028-ac10-c894727a816e] 20.000
+ - [e536a97e-2939-474f-be3e-ee2f67112fdf] 40.000
+ - [0d449af4-7a64-432e-8c1b-07e8cb445db7] 60.000
+ - [7ac9f3ab-fb3d-4275-b954-ece15955a6c4] 80.000
+ - [987f55a9-4737-43b6-b452-77c659becefc] 100.000
+
+FIELD: Número para contacto (ID: 6b351359-0e4b-4c02-8d07-d7ba1bcbda83, Type: short_text)
+
+FIELD: Responsable por el Kickoff (ID: 6c5d07c7-82df-4ea8-997a-19b40ef0a1cf, Type: users)
+
+FIELD: Nombre del Responsable (ID: 6eee4880-0368-487d-9dd5-64bee39b51e9, Type: short_text)
+
+FIELD: Description (ID: 7726fce5-650e-41e8-a262-d5ab1f531575, Type: short_text)
+
+FIELD: ¿Contrato el sitio web? (ID: 796c8564-bfb5-4140-99d7-4339c6b097e5, Type: drop_down)
+Options:
+ - [5be283d0-7547-46dc-84a9-9327f9dc663e] si
+ - [d4a8c41b-1805-497a-b4cf-4b4f2e02b577] no
+
+FIELD: Tipo de implementación (ID: 7da5db57-2aef-4989-bc1f-98dd415df780, Type: drop_down)
+Options:
+ - [f11e5bec-9a6c-4017-819a-7babf928bc7d] Nuevo cliente
+ - [371f41be-5f04-46ec-9803-f9be091bd0f9] Upgrade 
+ - [6dedf940-eb64-4790-9c8b-5e6a20c0a080] Upgrade ¡Hola! IA 
+ - [2e7d69ff-b9fa-49f3-be7e-7ad5945cade1] Nuevo clientes + ¡Hola! IA
+
+FIELD: Página Web (ID: 7e1befaa-2e4c-40f3-bf2f-10fa2f02f919, Type: url)
+
+FIELD: Hola (ID: 7ef7647a-d3d5-43f2-9cef-8d455bb6469e, Type: currency)
+
+FIELD: Resposable por PBX (ID: 876f59ac-3fbc-45b1-900b-c0ebe6026143, Type: users)
+
+FIELD: Responsable comercial (ID: 877072ed-d067-4290-bd71-a62e108349a9, Type: users)
+
+FIELD: Cantidad de Capacitaciones R1 (ID: 8acd8dc9-b166-486b-9257-d4beb2ce27e4, Type: number)
+
+FIELD: Responsable facturación (ID: 90445c1c-aa7c-4ecd-8f21-08dd4bb41c98, Type: users)
+
+FIELD: Adicionar cotización (ID: 94024b0f-3362-4d25-8f7d-9b85fb781185, Type: attachment)
+
+FIELD: Token Wispro (ID: 94a38fba-a433-4aac-87a8-ac023e6581f4, Type: short_text)
+
+FIELD: Mes de finalización Capacitaciones (ID: a5cdb115-1711-4402-97d5-2ce8a4ad7edf, Type: labels)
+Options:
+ - [72423397-ff9b-402d-bda4-1655dfb84750] Enero
+ - [5775b7e8-f38b-465f-a75b-851bbf97748c] Febrero
+ - [1a679d34-9b15-47ae-a7f1-23db5d48f3b8] Marzo
+ - [dda5bb0d-70af-432f-bd8d-7bc3b63070ff] Abril
+ - [ff88ff47-bc00-4a1a-894a-26e1524adcfe] Mayo
+ - [79476215-2bae-4283-88f8-4021e5a045ef] Junio
+ - [6429280c-b90f-4a7b-94a5-096bf1d21c62] Julio
+ - [26feaf4b-20d5-4b79-a955-6107804bd91a] Agosto
+ - [dd55bbf6-fa9c-430e-8cfb-cc0db5e3d190] Septiembre
+ - [7488dd8d-d39f-49c4-a434-03d886f2ae6d] Octubre
+ - [20c987fd-f0b2-4a4c-983c-c2f0ffa898a3] Noviembre
+ - [0f21f4aa-e1f4-4fc9-942f-62d0697c3dad] Diciembre
+
+FIELD: Canales bajados (ID: a75f0780-2fe0-421d-b065-f48ba4ce2c1e, Type: labels)
+Options:
+ - [30cdd335-df93-4c66-ba40-18affe6e97b7] WhatsApp
+ - [4c32f0c5-f45b-4c82-b796-a246c326b1e5] Telegram
+ - [21e89ac3-6f8d-4b34-bbb2-9cf2ec7bb239] Messenger
+ - [b203d45d-e69a-4798-8180-126629df9bc9] Instagram
+ - [40052a68-6b7b-4130-9b41-7426f138b40c] Webchat
+ - [ef3b9b77-b71a-43aa-bbae-9979fe39176e] Telefonia
+ - [caa3a0c1-dfac-4290-8c85-2d2965ef873c] upgrade
+
+FIELD: Productos contratados (ID: b3955bb1-3f61-4b97-a3c4-2376f1b87452, Type: drop_down)
+Options:
+ - [47439c17-3d90-4348-bc13-94b81aef6d2e] Hola! Suite
+ - [6b1f4937-baf2-418e-9b5f-774779d3c88f] Wispro + Hola! Suite
+ - [e62a7222-c774-41d7-a5da-de3bbd07766c] Wispro + Hola! Suite + ACS
+ - [33fa8b1b-73d0-4247-90fc-f1b29a5d5457] Hola Suite + ¡Hola! IA
+ - [62871e5f-a497-49e4-80a9-d0cf6c2185c5] Wispro + ¡Hola! Suite + ¡Hola! IA + ACS
+
+FIELD: Motivos de baja (ID: bdd84368-ec4c-4475-a5e1-8d0ba0ae33db, Type: drop_down)
+Options:
+ - [2844eaf1-b416-4044-b12f-03eaad7f2bf4] Desistio de la implementación
+ - [ae7d813d-ec39-4085-ba33-487c6eecc4ea] Falta de funcionalidad
+ - [3a0a69d5-7537-454f-bc9c-aaa1f048bb49] Cliente cancelo Wispro
+ - [605a72bd-e0f8-4109-803b-db7d5ea76a6a] Desmotivado
+ - [d7899f21-c939-4015-9aa0-75fa8de912e1] Cliente moroso
+ - [6cb3b981-04ed-470d-88cc-8663430da783] Incumplimiento de pago
+ - [ba1d8152-3d09-4e51-b939-6007eb92680c] Sin perfil
+ - [b91bdf47-23c7-4843-a43c-9ac405a55cbe] Falta de funcionalidades
+ - [8b3a4c13-4151-48a5-b838-69006fd600ea] Costo
+ - [3b21663b-72ff-41f8-b93a-f9d5dd59f915] Falla de IXC Soft
+ - [28c35f1e-3644-45cf-9a8d-c0db6113a009] Cambio estratégico del cliente
+ - [13e50202-7e80-47ba-831e-821d4619a955] Cambio estratégico de terceros
+ - [3e954d4a-b31a-4b95-9f50-9ad8e2bab783] No identificado
+ - [c4e0b9b1-ebdf-4f02-bfa1-11b4c8b2fd4b] Usabilidad
+ - [5c3382de-b161-4e72-9b61-2d87fe7a4243] Equipo reducido
+ - [2d4ff46a-695c-4110-b91d-24141ffbf8cf] Sin demanda
+ - [80a94a8d-0e6e-4a35-9f29-5f6d4be9ef5a] Competencia
+ - [16d4b5fd-e84b-49b6-b46a-3ddc6d0961c3] Bugs
+ - [8acf4989-ff4d-4e49-899a-34c77a1717cd] Soporte
+ - [a8102ee9-bfeb-42ce-894b-22ec49e990a7] Comunicación
+ - [0dbc74a9-2af2-4fe6-a108-3d241af64712] Unificación de bases
+ - [8ad2a0f6-6a47-4197-b6fc-9084f130661b] Cerró la empresa
+ - [01c97e05-2439-4376-b63f-2507951b51d5] Vendió la empresa
+ - [4df901fa-e87c-4bf9-9ea0-f6167d05a6b9] Error de venta
+ - [7272aaa9-157f-45e0-917d-863dbe6f82c0] Falla Meta
+
+FIELD: Responsable por Verificación (ID: cfc49e0f-16c8-4518-a1f2-09cffab319a9, Type: users)
+
+FIELD: Valor total (ID: d0830a5a-34c0-4300-b925-58194736bb76, Type: currency)
+
+FIELD: WhatsApp API Oficial (ID: e32b1b19-bc99-4c2b-bd1b-06d534ec5d18, Type: drop_down)
+Options:
+ - [370311b8-d785-4d95-839c-22373e1ad5d4] Si
+ - [157d855f-3e4d-4513-9086-c3c537104cba] No
+
+FIELD: Sistema gestion anterior (ID: e8cf7af8-3dfa-449a-a06b-3e6566a1793f, Type: drop_down)
+Options:
+ - [eff8d1f2-ed97-494a-b358-8427f30a20d9] Wispro
+ - [9b4b527a-cb8a-4918-9117-e65c6b71c7c7] Otro
+ - [82b82c8c-0599-4e9e-a34c-52c45a8d987c] Mikrowisp
+
+FIELD: IP Hola (ID: e97b52cd-7987-4b5d-b9a9-bbec60a80471, Type: short_text)
+
+FIELD: Responsable por el Go-live (ID: f67429f1-4f69-4432-99c8-c592f11015f5, Type: users)
+
+FIELD: Mes de inicio Capacitaciones (ID: fed4b8d1-6cd2-4bfc-a192-efe0c87278c0, Type: labels)
+Options:
+ - [183571f1-89bc-4d0f-8522-e3992b697ea7] Enero
+ - [53b4bd10-34fe-4dd7-81bb-f7b16bf03e6b] Febrero
+ - [552a0e4c-6793-4faa-8502-6075c1802da6] Marzo
+ - [bc1fb329-487a-4b34-a98f-9ae85b6b77e7] Abril
+ - [f4ac758f-3a25-4fcc-9d05-f4f28b2f814a] Mayo
+ - [4634db64-c1d9-49b8-b00e-ef1eae251c6c] Junio
+ - [78c00b02-d9f5-4e19-965b-422e5418083f] Julio
+ - [1905955f-3d38-497f-a6d9-3326445a007b] Agosto
+ - [afa64ab0-bc28-484b-b0fd-a61367e5be69] Septiembre
+ - [376a31e6-52aa-4427-9395-d5e9aa751940] Octubre
+ - [1b71285c-fb6e-4fdd-9b05-693d445394f9] Noviembre
+ - [5dea8d75-571d-477a-af5d-bd03e2d1ed49] Diciembre

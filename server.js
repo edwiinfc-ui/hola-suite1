@@ -31,6 +31,7 @@ const LOCAL_OVERRIDES_FILE = path.join(DATA_DIR, 'local_overrides.json');
 const SALES_CONFIG_FILE = path.join(DATA_DIR, 'sales_config.json');
 const LOGS_FILE = path.join(DATA_DIR, 'audit_logs.json');
 const KANBANS_FILE = path.join(DATA_DIR, 'kanbans.json');
+const CONFIG_FILE = path.join(DATA_DIR, 'global_config.json');
 
 const PUBLIC_FILES = new Set([
   'vylex.html',
@@ -2480,17 +2481,15 @@ app.get('/api/clientes/:id', auth, async (req, res) => {
 // ================================================================
 const BULK_UPDATE_FIELDS = new Set(['rKickoff','rVer','rCap','rGoLive','rAct','pais','plan','email','telefono']);
 const DEFAULT_CLICKUP_CUSTOM_FIELD_MAP = {
-  // Ejemplo: mapear "rKickoff" al ID real del custom field en ClickUp
-  // NOTA: estos IDs deben coincidir con los custom fields de tu lista en ClickUp.
-  rKickoff: 'cf_rKickoff_id_aqui',
-  rVer: 'cf_rVer_id_aqui',
-  rCap: 'cf_rCap_id_aqui',
-  rGoLive: 'cf_rGoLive_id_aqui',
-  rAct: 'cf_rAct_id_aqui',
-  pais: 'cf_pais_id_aqui',
-  plan: 'cf_plan_id_aqui',
-  email: 'cf_email_id_aqui',
-  telefono: 'cf_telefono_id_aqui'
+  rKickoff: '6c5d07c7-82df-4ea8-997a-19b40ef0a1cf',
+  rVer: 'cfc49e0f-16c8-4518-a1f2-09cffab319a9',
+  rCap: '25f5a125-50cb-45b2-aaf7-82af69340a84',
+  rGoLive: 'f67429f1-4f69-4432-99c8-c592f11015f5',
+  rAct: '565da23b-9415-4a54-8e78-4b3e80765ded',
+  pais: '0db874a3-5801-407f-8026-1c3af67dc4e3',
+  plan: '24777517-3feb-493c-87b6-716d504c49b9',
+  email: '049004a9-ff71-4463-b3ce-fd8d2b58606d',
+  telefono: '6b351359-0e4b-4c02-8d07-d7ba1bcbda83'
 };
 
 function getClickUpCustomFieldMap() {

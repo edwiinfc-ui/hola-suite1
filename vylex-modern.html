@@ -2391,6 +2391,8 @@ const APP = {
   currentSection:'dashboard',
   language:'es',
   currentUser:null,
+  kanbans:[],
+  activeKanbanId:'default',
   syncing:false,
   lastSync:null,
   apiMeta:{source:'none',taskCount:0,syncedAt:null},
@@ -5778,9 +5780,18 @@ function renderKanban() {
   const board = document.getElementById('kanbanBoard');
   if (!board) return;
 
+  if (!Array.isArray(APP.kanbans)) APP.kanbans = [];
+  if (!APP.activeKanbanId) APP.activeKanbanId = 'default';
+
+  if (!APP.token) {
+    board.innerHTML = `<div class="no-data"><p>Inicia sesión para ver y gestionar Kanbans.</p></div>`;
+    return;
+  }
+
   const activeKb = APP.kanbans.find(k => k.id === APP.activeKanbanId) || APP.kanbans[0];
   if (!activeKb) {
     board.innerHTML = `<div class="no-data"><p>Cargando tableros...</p></div>`;
+    loadCustomKanbans().catch(()=>{});
     return;
   }
 

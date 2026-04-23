@@ -199,7 +199,7 @@ const CONFIG = {
                       'configurar messenger','configuracion messenger','configuracion de messenger',
                       'configurar webchat','configuracion webchat','configuracion de webchat',
                       'prueba','test','teste','demo','crear vm'],
-  ESTADOS_IGNORAR  : ['revisión comercial','revision comercial'],
+  ESTADOS_IGNORAR  : [],
   PAISES: {
     'argentina':'Argentina','colombia':'Colombia','colômbia':'Colombia',
     'méxico':'México','mexico':'México','venezuela':'Venezuela',
@@ -230,6 +230,8 @@ const ESTADOS_IMPL = [
   'listo para instalación','listo para instalacion','en instalación','en instalacion',
   'en capacitación','en capacitacion','capacitacion',
   'go-live','go live','activación canales','activacion canales','activación','activacion',
+  'revisión comercial','revision comercial',
+  'site en desarrollo','site en desarrollo',
   'concluído','concluido','closed','cerrado','cancelado','en espera wispro'
 ];
 

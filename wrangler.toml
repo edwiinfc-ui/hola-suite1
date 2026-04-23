@@ -1,4 +1,4 @@
-name = "hola-suite1"
+name = "dashboard-holasuite"
 main = "src/worker.js"
 compatibility_date = "2026-04-02"
 
